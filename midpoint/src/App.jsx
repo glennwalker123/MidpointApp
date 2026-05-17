@@ -1793,9 +1793,10 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
     return () => clearTimeout(t);
   }, []);
 
-  const bg = chromeBg(level.bg);
-  const textStrong = "rgba(255,255,255,0.95)";
-  const textBorder = "rgba(255,255,255,0.45)";
+  const bg = roundColor(level);
+  const bgStr = oklchStr(bg);
+  const textStrong = labelOn(bg, true);
+  const textBorder = labelOn(bg);
 
   function handleExit() {
     if (audio) audio.buttonTap();
@@ -1805,20 +1806,25 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
   return (
     <div
       className="min-h-screen flex justify-center screen-in"
-      style={{ background: bg }}
+      style={{ background: bgStr }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center">
           <div
-            className="text-[11px] tracking-[0.4em] uppercase text-white/35 mb-8 fade-up"
-            style={{ animationDelay: "0.36s", animationDuration: "1.26s" }}
+            className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
+            style={{
+              color: textBorder,
+              animationDelay: "0.36s",
+              animationDuration: "1.26s",
+            }}
           >
             Chapter {String(level.id).padStart(2, "0")}
           </div>
 
           <h1
-            className="font-display italic text-white/95 leading-none mb-12 fade-up"
+            className="font-display italic leading-none mb-12 fade-up"
             style={{
+              color: textStrong,
               animationDelay: "1.08s",
               animationDuration: "1.62s",
               fontSize: "clamp(3.4rem, 14vw, 5.2rem)",
@@ -1828,8 +1834,9 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           </h1>
 
           <p
-            className="font-display italic text-white/70 leading-relaxed max-w-sm fade-up"
+            className="font-display italic leading-relaxed max-w-sm fade-up"
             style={{
+              color: textBorder,
               animationDelay: "2.34s",
               animationDuration: "1.62s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.08rem)",
@@ -1882,70 +1889,6 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 // CHALLENGE VIEW
 // ============================================================================
 
-// Wavy boundary between two colour bands. The SVG sits centred on the
-// boundary line and the *only* thing it draws is two pure-colour regions
-// separated by an animated curve — the bands' colours themselves are never
-// modified. `style` positions it onto the boundary.
-function WaveBoundary({ topColor, bottomColor, style, dur = "11s", begin = "0s" }) {
-  const VB_W = 100;
-  const VB_H = 2;
-  // Sub-pixel swings — the boundary should breathe at the edge of perception,
-  // felt more than seen. Combined with slow cycles below.
-  const waves = [
-    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
-    { y100: 0.9,  c2y: 1.05, mid: 1.1,  y0: 0.9  },
-    { y100: 1.1,  c2y: 1.35, mid: 0.9,  y0: 1.1  },
-    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
-    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
-  ];
-  const topD = (w) =>
-    `M 0 0 L ${VB_W} 0 L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
-  const bottomD = (w) =>
-    `M 0 ${VB_H} L ${VB_W} ${VB_H} L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
-  const topVals = waves.map(topD).join(";");
-  const bottomVals = waves.map(bottomD).join(";");
-  return (
-    <svg
-      preserveAspectRatio="none"
-      viewBox={`0 0 ${VB_W} ${VB_H}`}
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        width: "100%",
-        height: `${VB_H}px`,
-        pointerEvents: "none",
-        ...style,
-      }}
-    >
-      <path d={topD(waves[0])} fill={topColor}>
-        <animate
-          attributeName="d"
-          values={topVals}
-          dur={dur}
-          begin={begin}
-          repeatCount="indefinite"
-          calcMode="spline"
-          keyTimes="0;0.25;0.5;0.75;1"
-          keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
-        />
-      </path>
-      <path d={bottomD(waves[0])} fill={bottomColor}>
-        <animate
-          attributeName="d"
-          values={bottomVals}
-          dur={dur}
-          begin={begin}
-          repeatCount="indefinite"
-          calcMode="spline"
-          keyTimes="0;0.25;0.5;0.75;1"
-          keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
-        />
-      </path>
-    </svg>
-  );
-}
-
 function ChallengeView({
   level, challenge, challengeIdx, total, phase, position,
   candidateCol, truthCol, score, distance, hasInteracted, hasReleased, isDragging,
@@ -1980,7 +1923,7 @@ function ChallengeView({
     >
       <div className="relative w-full max-w-md text-white select-none" style={{ minHeight: "100vh" }}>
         <div
-          className="relative grid w-full"
+          className="grid w-full"
           style={{
             gridTemplateRows: "1fr 1fr 1fr",
             height: "100vh",
@@ -2049,21 +1992,6 @@ function ChallengeView({
           <div
             className="w-full"
             style={{ background: oklchStr(challenge.b), transition: "background 1.44s ease" }}
-          />
-
-          <WaveBoundary
-            topColor={oklchStr(challenge.a)}
-            bottomColor={oklchStr(candidateCol)}
-            style={{ top: "calc(33.333% - 1px)" }}
-            dur="22s"
-            begin="0s"
-          />
-          <WaveBoundary
-            topColor={oklchStr(candidateCol)}
-            bottomColor={oklchStr(challenge.b)}
-            style={{ top: "calc(66.666% - 1px)" }}
-            dur="26s"
-            begin="-6s"
           />
         </div>
 
