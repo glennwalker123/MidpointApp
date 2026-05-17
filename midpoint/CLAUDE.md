@@ -62,7 +62,8 @@ If asked to change volumes, the current balance (set carefully): ambient is the 
 - Don't add Tailwind plugins or component libraries. The styling is custom and intentional.
 - Don't introduce a state library, router, or fetch layer. Single component, in-memory state.
 - Don't add gamification (XP, streaks, leaderboards).
-- Don't add a settings screen with toggles. Mute is the only setting; it lives in the home corner.
+- Settings screen contains only the mute toggle. Don't grow it into a preferences dashboard — if a new pref is genuinely needed, push back first.
+- Levels are gated: round N is locked until round N-1 is completed. Don't surface a "play any round" override.
 - Don't replace OKLCH with HSL or sRGB. Perceptual uniformity is the whole point.
 - Don't import icon libraries. The mute icon is a hand-drawn SVG.
 - Don't shorten the animation durations to feel "snappier." The slowness is the design.
@@ -82,7 +83,7 @@ Vite app. `npm run build` outputs `dist/`. Drop on Netlify or connect to Vercel.
 ## File map
 
 ```
-two-app/
+midpoint/
 ├── src/
 │   ├── App.jsx       ← the whole app
 │   ├── main.jsx

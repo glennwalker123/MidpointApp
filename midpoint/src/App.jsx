@@ -925,9 +925,8 @@ export default function App() {
           <Home
             onSelect={enterLevel}
             onOpenAbout={() => setScreen({ name: "about" })}
+            onOpenSettings={() => setScreen({ name: "settings" })}
             completed={completed}
-            muted={muted}
-            onToggleMute={toggleMute}
             audio={audioRef.current}
           />
         )}
@@ -935,6 +934,14 @@ export default function App() {
           <About
             onBack={() => setScreen({ name: "home" })}
             audio={audioRef.current}
+          />
+        )}
+        {screen.name === "settings" && (
+          <Settings
+            onBack={() => setScreen({ name: "home" })}
+            audio={audioRef.current}
+            muted={muted}
+            onToggleMute={toggleMute}
           />
         )}
         {screen.name === "level" && (
@@ -1035,10 +1042,14 @@ function ActionButton({
 // HOME
 // ============================================================================
 
-function Home({ onSelect, onOpenAbout, completed, muted, onToggleMute, audio }) {
+function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
   function openAbout() {
     if (audio) audio.buttonTap();
     onOpenAbout();
+  }
+  function openSettings() {
+    if (audio) audio.buttonTap();
+    onOpenSettings();
   }
 
   return (
@@ -1047,43 +1058,41 @@ function Home({ onSelect, onOpenAbout, completed, muted, onToggleMute, audio }) 
       style={{ background: oklchStr(HOME_BG) }}
     >
       <div className="w-full max-w-md px-8 py-14 flex flex-col">
-        <div className="flex justify-between items-start mb-12">
+        <div className="mb-12">
           <div className="fade-up">
             <div
               className="font-display italic text-6xl leading-none"
               style={{ color: CREAM_TEXT.strong }}
             >
-              two<span style={{ color: CREAM_TEXT.hint }}>.</span>
+              midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
             </div>
-            <div
-              className="text-[11px] tracking-[0.35em] uppercase mt-4"
-              style={{ color: CREAM_TEXT.soft }}
-            >
-              A small game of color
-            </div>
-          </div>
-          <div className="fade-up mt-2" style={{ animationDelay: "0.4s" }}>
-            <MuteToggle muted={muted} onToggle={onToggleMute} light={true} />
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 flex-1 content-start">
           {LEVELS.map((level, i) => {
             const isDone = completed.has(level.id);
+            const isLocked = i > 0 && !completed.has(LEVELS[i - 1].id);
             const tileCol = roundColor(level);
             const tileText = labelOn(tileCol, true);
             const tileTextSoft = labelOn(tileCol);
             return (
               <button
                 key={level.id}
+                disabled={isLocked}
+                aria-label={isLocked ? "Locked" : level.name}
                 onClick={() => {
+                  if (isLocked) return;
                   if (audio) audio.buttonTap();
                   onSelect(level.id);
                 }}
-                className="aspect-square relative fade-up transition-transform active:scale-[0.97]"
+                className={`aspect-square relative fade-up transition-transform ${
+                  isLocked ? "cursor-not-allowed" : "active:scale-[0.97]"
+                }`}
                 style={{
                   background: oklchStr(tileCol),
                   animationDelay: `${0.15 + i * 0.06}s`,
+                  opacity: isLocked ? 0.18 : 1,
                 }}
               >
                 <span
@@ -1099,19 +1108,21 @@ function Home({ onSelect, onOpenAbout, completed, muted, onToggleMute, audio }) 
                     aria-label="completed"
                   />
                 )}
-                <span
-                  className="absolute bottom-3 left-3 right-3 text-left font-display italic leading-none"
-                  style={{ color: tileText, fontSize: "20px" }}
-                >
-                  {level.name}
-                </span>
+                {!isLocked && (
+                  <span
+                    className="absolute bottom-3 left-3 right-3 text-left font-display italic leading-none"
+                    style={{ color: tileText, fontSize: "20px" }}
+                  >
+                    {level.name}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
         <div
-          className="pt-10 fade-up"
+          className="pt-10 flex justify-between items-end fade-up"
           style={{ animationDelay: `${0.15 + LEVELS.length * 0.06 + 0.3}s` }}
         >
           <button
@@ -1123,6 +1134,16 @@ function Home({ onSelect, onOpenAbout, completed, muted, onToggleMute, audio }) 
             }}
           >
             About this game
+          </button>
+          <button
+            onClick={openSettings}
+            className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+            style={{
+              color: CREAM_TEXT.soft,
+              borderColor: CREAM_TEXT.border,
+            }}
+          >
+            Settings
           </button>
         </div>
       </div>
@@ -1175,53 +1196,38 @@ function About({ onBack, audio }) {
             }}
           >
             <p>
-              Two is a small game about a single act of perception — finding
-              the midpoint between two colours. Drag, lock, and the screen
-              answers with the truth.
+              Midpoint is a game about a single act of perception. You drag
+              a band between two shades until it sits at the middle, lock
+              in, and the screen answers with the truth.
             </p>
 
             <p>
               The eye that plays today is not the same eye that played
-              yesterday. Colour perception drifts with sleep, with light, with
-              the time of day, with mood. Two people looking at the same screen
-              can have legitimately different perceptual midpoints — the ratio
-              of L-cones to M-cones in healthy adults varies enormously.
+              yesterday. Colour sense drifts with sleep, with light, with
+              mood. Two people looking at the same screen can see the
+              midpoint in different places, both honestly. Some hues are
+              harder than others &mdash; a fact of the cortex, not of you.
             </p>
 
             <p>
-              Some colours are objectively harder than others. Greens have the
-              widest just-noticeable-difference of any hue family. A score that
-              feels worse on the Garden round than on Night may not be you. It
-              may be a hundred-year-old finding of perceptual science.
+              Practice helps. The brain learns to listen to the eye more
+              carefully. The reflection screens are not decoration: learning
+              the names of colours quietly changes how you see them over
+              time.
             </p>
 
             <p>
-              Practice helps. Studies of art and design students show
-              measurable improvement on colour discrimination tests within a
-              semester. The neural mechanism is in V4, the part of the visual
-              cortex where colour categories live. The eye doesn't change. The
-              brain learns to listen to it more carefully.
-            </p>
-
-            <p>
-              The reflection screens are not decoration. The Russian language
-              has separate words for light and dark blue — and Russian speakers
-              measurably discriminate that boundary faster than English
-              speakers. Learning the names quietly changes how you see those
-              colours over time.
-            </p>
-
-            <p>
-              The sound under your finger pulses at six breaths per minute —
+              The sound under your finger pulses at six breaths per minute,
               the rate at which heart-rate variability peaks. Use headphones
-              and you will also hear a small offset between your ears, in the
-              theta range associated with deep relaxation.
+              and you will also hear a small offset between your ears, in a
+              frequency range associated with deep calm.
             </p>
 
             <p>
-              Two is not a diagnostic. It does not measure your sight or your
-              wellness. It is a small room in which to look slowly, learn a few
-              names, and notice your own variability without judgement.
+              Midpoint is not a diagnostic. It does not measure your sight
+              or your wellness. It is a small room in which to look slowly,
+              learn a few names, and notice your own variability &mdash;
+              without judgement.
             </p>
           </div>
         </div>
@@ -1233,6 +1239,78 @@ function About({ onBack, audio }) {
             textColor={CREAM_TEXT.strong}
             borderColor={CREAM_TEXT.borderStrong}
             delay={2.4}
+          >
+            Return
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// SETTINGS
+// ============================================================================
+
+function Settings({ onBack, audio, muted, onToggleMute }) {
+  function handleToggle() {
+    if (audio) audio.buttonTap();
+    onToggleMute();
+  }
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: oklchStr(HOME_BG) }}
+    >
+      <div className="w-full max-w-md px-8 py-14 flex flex-col">
+        <div className="flex-1">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
+            style={{
+              color: CREAM_TEXT.soft,
+              animationDelay: "0.3s",
+              animationDuration: "1.2s",
+            }}
+          >
+            Settings
+          </div>
+          <h1
+            className="font-display italic leading-[0.95] mb-12 fade-up"
+            style={{
+              color: CREAM_TEXT.strong,
+              animationDelay: "0.8s",
+              animationDuration: "1.6s",
+              fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
+            }}
+          >
+            Quiet, or not.
+          </h1>
+          <button
+            onClick={handleToggle}
+            aria-pressed={!muted}
+            className="w-full flex items-center justify-between py-5 border-b fade-up"
+            style={{
+              color: CREAM_TEXT.body,
+              borderColor: CREAM_TEXT.border,
+              animationDelay: "1.4s",
+              animationDuration: "1.6s",
+            }}
+          >
+            <span className="text-[11px] tracking-[0.3em] uppercase">
+              Sound
+            </span>
+            <span className="font-display italic text-lg">
+              {muted ? "off" : "on"}
+            </span>
+          </button>
+        </div>
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onBack}
+            textColor={CREAM_TEXT.strong}
+            borderColor={CREAM_TEXT.borderStrong}
+            delay={2.0}
           >
             Return
           </ActionButton>
