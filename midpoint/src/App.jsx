@@ -1,5 +1,4 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { flushSync } from "react-dom";
 
 // ============================================================================
 // AUDIO ENGINE — color-tuned tones and ambient pad
@@ -846,6 +845,51 @@ function rate(score) {
 }
 
 // ============================================================================
+// EXPANDING TILE — fixed-position overlay that flips from the tapped tile's
+// rect to fullscreen, masking the screen swap underneath.
+// ============================================================================
+
+function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    // Two RAFs so the browser paints the initial rect before transitioning.
+    let raf2;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setExpanded(true));
+    });
+    const t = setTimeout(onDone, duration);
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+      clearTimeout(t);
+    };
+  }, [duration, onDone]);
+
+  const sizing = expanded
+    ? { left: 0, top: 0, right: 0, bottom: 0, width: "auto", height: "auto" }
+    : {
+        left: fromRect.x,
+        top: fromRect.y,
+        width: fromRect.width,
+        height: fromRect.height,
+      };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        background: color,
+        transition: `all ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+        zIndex: 100,
+        pointerEvents: "none",
+        ...sizing,
+      }}
+    />
+  );
+}
+
+// ============================================================================
 // APP
 // ============================================================================
 
@@ -866,6 +910,7 @@ export default function App() {
   const [completed, setCompleted] = useState(new Set());
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
+  const [morph, setMorph] = useState(null);
   const audioRef = useRef(null);
 
   if (!audioRef.current) {
@@ -887,19 +932,14 @@ export default function App() {
     setScreen({ name: "home" });
   }
 
-  function enterLevel(id) {
+  function enterLevel(id, fromRect, color) {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
-    const go = () => setScreen({ name: "level", levelId: id });
-    if (typeof document !== "undefined" && document.startViewTransition) {
-      // flushSync forces React to render synchronously inside the transition
-      // callback, so the browser captures the NEW DOM (IntroScreen) before
-      // animating from the OLD (the tapped tile).
-      document.startViewTransition(() => {
-        flushSync(go);
-      });
+    if (fromRect && color) {
+      setMorph({ id, fromRect, color });
+      setScreen({ name: "level", levelId: id });
     } else {
-      go();
+      setScreen({ name: "level", levelId: id });
     }
   }
 
@@ -951,19 +991,6 @@ export default function App() {
           to   { opacity: 1; }
         }
         .screen-in { animation: screenIn 0.9s ease both; }
-
-        /* Slow every view transition (root cross-fade + named tile→page morph) */
-        ::view-transition-group(*),
-        ::view-transition-old(*),
-        ::view-transition-new(*) {
-          animation-duration: 1.1s;
-          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-        }
-        /* The morphing tile owns the transition; the rest of the page just fades */
-        ::view-transition-old(root),
-        ::view-transition-new(root) {
-          animation-duration: 0.6s;
-        }
 
         @keyframes hintPulse {
           0%, 100% { opacity: 0.3; }
@@ -1025,6 +1052,14 @@ export default function App() {
           />
         )}
       </div>
+
+      {morph && (
+        <ExpandingTile
+          color={morph.color}
+          fromRect={morph.fromRect}
+          onDone={() => setMorph(null)}
+        />
+      )}
     </>
   );
 }
@@ -1320,10 +1355,16 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
                 key={level.id}
                 disabled={isLocked}
                 aria-label={isLocked ? `Chapter ${level.id}, locked` : level.name}
-                onClick={() => {
+                onClick={(e) => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
-                  onSelect(level.id);
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onSelect(level.id, {
+                    x: r.x,
+                    y: r.y,
+                    width: r.width,
+                    height: r.height,
+                  }, oklchStr(tileCol));
                 }}
                 className={`relative w-full fade-up transition-transform ${
                   isLocked ? "cursor-not-allowed" : "active:scale-[0.99]"
@@ -1332,7 +1373,6 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
                   height: "108px",
                   background: isLocked ? lockedBg : oklchStr(tileCol),
                   animationDelay: `${0.15 + i * 0.05}s`,
-                  viewTransitionName: isLocked ? undefined : `tile-${level.id}`,
                 }}
               >
                 <span
@@ -1823,10 +1863,7 @@ function IntroScreen({ level, audio, onBegin }) {
   return (
     <div
       className="min-h-screen flex justify-center"
-      style={{
-        background: bgStr,
-        viewTransitionName: `tile-${level.id}`,
-      }}
+      style={{ background: bgStr }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center">
