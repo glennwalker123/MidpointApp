@@ -1888,15 +1888,15 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 // modified. `style` positions it onto the boundary.
 function WaveBoundary({ topColor, bottomColor, style, dur = "11s", begin = "0s" }) {
   const VB_W = 100;
-  const VB_H = 14;
+  const VB_H = 2;
   // Sub-pixel swings — the boundary should breathe at the edge of perception,
   // felt more than seen. Combined with slow cycles below.
   const waves = [
-    { y100: 7,   c2y: 8,   mid: 7,   y0: 7   },
-    { y100: 6.7, c2y: 7.6, mid: 7.4, y0: 6.7 },
-    { y100: 7.3, c2y: 8.4, mid: 6.6, y0: 7.3 },
-    { y100: 7,   c2y: 8,   mid: 7,   y0: 7   },
-    { y100: 7,   c2y: 8,   mid: 7,   y0: 7   },
+    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
+    { y100: 0.9,  c2y: 1.05, mid: 1.1,  y0: 0.9  },
+    { y100: 1.1,  c2y: 1.35, mid: 0.9,  y0: 1.1  },
+    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
+    { y100: 1,    c2y: 1.2,  mid: 1,    y0: 1    },
   ];
   const topD = (w) =>
     `M 0 0 L ${VB_W} 0 L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
@@ -2054,14 +2054,14 @@ function ChallengeView({
           <WaveBoundary
             topColor={oklchStr(challenge.a)}
             bottomColor={oklchStr(candidateCol)}
-            style={{ top: "calc(33.333% - 7px)" }}
+            style={{ top: "calc(33.333% - 1px)" }}
             dur="22s"
             begin="0s"
           />
           <WaveBoundary
             topColor={oklchStr(candidateCol)}
             bottomColor={oklchStr(challenge.b)}
-            style={{ top: "calc(66.666% - 7px)" }}
+            style={{ top: "calc(66.666% - 1px)" }}
             dur="26s"
             begin="-6s"
           />
