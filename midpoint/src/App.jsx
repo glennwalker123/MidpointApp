@@ -755,18 +755,22 @@ const ONBOARDING_SLIDES = [
   {
     title: "On colour.",
     body: "Midpoint is a small game about a single act of perception. You will be shown two colours, and asked to find the middle.",
+    bg: { l: 0.88, c: 0.028, h: 80 },
   },
   {
     title: "Drag, then lock.",
     body: "Move a band between the two colours until it sits at the perceptual midpoint. Lock in. The screen will answer with the truth.",
+    bg: { l: 0.83, c: 0.038, h: 230 },
   },
   {
     title: "Slow looking.",
     body: "Your eye drifts with sleep, with light, with mood. Each round trains attention, not competence. There are no wrong answers — only honest ones.",
+    bg: { l: 0.84, c: 0.032, h: 150 },
   },
   {
     title: "Begin.",
     body: "Use headphones if you have them. The sound is part of the design.",
+    bg: { l: 0.83, c: 0.045, h: 35 },
   },
 ];
 
@@ -882,15 +886,6 @@ export default function App() {
     setScreen({ name: "home" });
   }
 
-  function onboardingReadMore() {
-    try {
-      localStorage.setItem(ONBOARDED_KEY, "1");
-    } catch {
-      // ignore
-    }
-    setScreen({ name: "about" });
-  }
-
   function enterLevel(id) {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
@@ -971,11 +966,7 @@ export default function App() {
 
       <div className="font-sans min-h-screen">
         {screen.name === "onboarding" && (
-          <Onboarding
-            onDone={finishOnboarding}
-            onOpenAbout={onboardingReadMore}
-            audio={audioRef.current}
-          />
+          <Onboarding onDone={finishOnboarding} audio={audioRef.current} />
         )}
         {screen.name === "home" && (
           <Home
@@ -1098,11 +1089,16 @@ function ActionButton({
 // ONBOARDING — 3–4 calm slides shown on first visit
 // ============================================================================
 
-function Onboarding({ onDone, onOpenAbout, audio }) {
+function Onboarding({ onDone, audio }) {
   const [i, setI] = useState(0);
   const slide = ONBOARDING_SLIDES[i];
   const isFirst = i === 0;
   const isLast = i === ONBOARDING_SLIDES.length - 1;
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+
+  const strong = labelOn(slide.bg, true);
+  const soft = labelOn(slide.bg);
 
   function next() {
     if (audio) audio.buttonTap();
@@ -1118,32 +1114,48 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
     if (audio) audio.buttonTap();
     onDone();
   }
-  function readMore() {
-    if (audio) audio.buttonTap();
-    onOpenAbout();
-  }
 
-  const arrowStroke = CREAM_TEXT.strong;
+  function handleTouchStart(e) {
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+  }
+  function handleTouchEnd(e) {
+    if (touchStartX.current == null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX.current;
+    const dy = t.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    // Require a clearly horizontal swipe; ignore mostly-vertical motion
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) next();
+    else prev();
+  }
 
   return (
     <div
       className="min-h-screen flex justify-center screen-in"
-      style={{ background: oklchStr(HOME_BG) }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        background: oklchStr(slide.bg),
+        transition: "background 1.4s cubic-bezier(0.22, 1, 0.36, 1)",
+        touchAction: "pan-y",
+      }}
     >
       <div className="w-full max-w-md px-8 py-14 flex flex-col">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-center">
           <div
-            className="text-[11px] tracking-[0.4em] uppercase"
-            style={{ color: CREAM_TEXT.soft }}
+            className="font-display italic leading-none"
+            style={{ color: strong, fontSize: "22px" }}
           >
-            {`${String(i + 1).padStart(2, "0")} / ${String(
-              ONBOARDING_SLIDES.length
-            ).padStart(2, "0")}`}
+            midpoint<span style={{ color: soft }}>.</span>
           </div>
           <button
             onClick={skip}
             className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
-            style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+            style={{ color: soft, borderColor: soft }}
           >
             Skip
           </button>
@@ -1154,7 +1166,7 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
             key={`title-${i}`}
             className="font-display italic leading-[0.95] mb-8 fade-up"
             style={{
-              color: CREAM_TEXT.strong,
+              color: strong,
               fontSize: "clamp(2.8rem, 11vw, 4rem)",
               animationDuration: "1.2s",
             }}
@@ -1163,9 +1175,9 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
           </h1>
           <p
             key={`body-${i}`}
-            className="font-display leading-relaxed mb-8 fade-up max-w-sm"
+            className="font-display leading-relaxed fade-up max-w-sm"
             style={{
-              color: CREAM_TEXT.body,
+              color: strong,
               fontSize: "clamp(1rem, 4vw, 1.12rem)",
               animationDelay: "0.3s",
               animationDuration: "1.4s",
@@ -1173,21 +1185,6 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
           >
             {slide.body}
           </p>
-          {!isLast && (
-            <button
-              key={`more-${i}`}
-              onClick={readMore}
-              className="self-start text-[11px] tracking-[0.35em] uppercase pb-1 border-b fade-up transition-colors duration-500"
-              style={{
-                color: CREAM_TEXT.soft,
-                borderColor: CREAM_TEXT.border,
-                animationDelay: "0.6s",
-                animationDuration: "1.4s",
-              }}
-            >
-              Read more
-            </button>
-          )}
         </div>
 
         <div className="pt-8">
@@ -1195,8 +1192,8 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
             <ActionButton
               audio={audio}
               onClick={next}
-              textColor={CREAM_TEXT.strong}
-              borderColor={CREAM_TEXT.borderStrong}
+              textColor={strong}
+              borderColor={strong}
               delay={0.4}
             >
               Play now
@@ -1213,7 +1210,7 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
                 <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
                   <path
                     d="M7 1L1 7l6 6M1 7h20"
-                    stroke={arrowStroke}
+                    stroke={strong}
                     strokeWidth="1"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1224,10 +1221,10 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
                 {ONBOARDING_SLIDES.map((_, j) => (
                   <span
                     key={j}
-                    className="block w-1.5 h-1.5 rounded-full transition-colors duration-500"
+                    className="block w-1.5 h-1.5 rounded-full transition-opacity duration-500"
                     style={{
-                      background:
-                        j === i ? CREAM_TEXT.strong : CREAM_TEXT.border,
+                      background: strong,
+                      opacity: j === i ? 1 : 0.22,
                     }}
                   />
                 ))}
@@ -1240,7 +1237,7 @@ function Onboarding({ onDone, onOpenAbout, audio }) {
                 <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
                   <path
                     d="M15 1l6 6-6 6M21 7H1"
-                    stroke={arrowStroke}
+                    stroke={strong}
                     strokeWidth="1"
                     strokeLinecap="round"
                     strokeLinejoin="round"
