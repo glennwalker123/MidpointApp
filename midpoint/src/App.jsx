@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { flushSync } from "react-dom";
 
 // ============================================================================
 // AUDIO ENGINE — color-tuned tones and ambient pad
@@ -891,7 +892,12 @@ export default function App() {
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
     const go = () => setScreen({ name: "level", levelId: id });
     if (typeof document !== "undefined" && document.startViewTransition) {
-      document.startViewTransition(go);
+      // flushSync forces React to render synchronously inside the transition
+      // callback, so the browser captures the NEW DOM (IntroScreen) before
+      // animating from the OLD (the tapped tile).
+      document.startViewTransition(() => {
+        flushSync(go);
+      });
     } else {
       go();
     }
@@ -946,11 +952,17 @@ export default function App() {
         }
         .screen-in { animation: screenIn 0.9s ease both; }
 
-        /* Slow the default cross-fade for the home → intro tile morph */
+        /* Slow every view transition (root cross-fade + named tile→page morph) */
+        ::view-transition-group(*),
+        ::view-transition-old(*),
+        ::view-transition-new(*) {
+          animation-duration: 1.1s;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* The morphing tile owns the transition; the rest of the page just fades */
         ::view-transition-old(root),
         ::view-transition-new(root) {
-          animation-duration: 1.0s;
-          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+          animation-duration: 0.6s;
         }
 
         @keyframes hintPulse {
