@@ -1013,6 +1013,24 @@ export default function App() {
         }
         .drift { animation: drift 6s ease-in-out infinite; }
 
+        /* Liquid shimmer — slow drifting highlight inside a colour band.
+           Soft, never obscures the boundary the player needs to see. */
+        @keyframes liquidShift {
+          0%   { transform: translate(-4%, -3%) scale(1.02); }
+          50%  { transform: translate(3%, 4%) scale(1.08); }
+          100% { transform: translate(-2%, 1%) scale(1.00); }
+        }
+        .liquid-band {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(ellipse 85% 55% at 35% 30%, rgba(255,255,255,0.07), transparent 55%),
+            radial-gradient(ellipse 75% 50% at 70% 75%, rgba(0,0,0,0.06), transparent 55%);
+          mix-blend-mode: soft-light;
+          animation: liquidShift 14s ease-in-out infinite alternate;
+        }
+
         /* Breath cycle: 4s inhale → 4s hold → 4s exhale */
         /* removed */
 
@@ -1996,14 +2014,16 @@ function ChallengeView({
           }}
         >
           <div
-            className="w-full"
+            className="relative w-full overflow-hidden"
             style={{ background: oklchStr(challenge.a), transition: "background 1.6s ease" }}
-          />
+          >
+            <div className="liquid-band" />
+          </div>
 
           <div className="relative w-full overflow-hidden">
             {phase === "play" ? (
               <div
-                className="w-full h-full candidate-drag cursor-grab active:cursor-grabbing"
+                className="w-full h-full candidate-drag cursor-grab active:cursor-grabbing relative overflow-hidden"
                 style={{
                   background: oklchStr(candidateCol),
                   transition: isDragging ? "none" : "background 0.6s ease",
@@ -2013,6 +2033,10 @@ function ChallengeView({
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
               >
+                <div
+                  className="liquid-band"
+                  style={{ animationDuration: "18s", animationDelay: "-4s" }}
+                />
                 {!hasInteracted && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
@@ -2056,9 +2080,14 @@ function ChallengeView({
           </div>
 
           <div
-            className="w-full"
+            className="relative w-full overflow-hidden"
             style={{ background: oklchStr(challenge.b), transition: "background 1.6s ease" }}
-          />
+          >
+            <div
+              className="liquid-band"
+              style={{ animationDuration: "16s", animationDelay: "-7s" }}
+            />
+          </div>
         </div>
 
         {/* Floating bar — slides up from below on first release. Transparent, sits over band B. */}
