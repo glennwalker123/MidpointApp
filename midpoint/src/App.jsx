@@ -1785,20 +1785,32 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
 
 function IntroScreen({ level, audio, onBegin }) {
   const [canBegin, setCanBegin] = useState(false);
+  const targetBg = chromeBg(level.bg);
+  const startBg = oklchStr(roundColor(level));
+  const [bgNow, setBgNow] = useState(startBg);
 
   useEffect(() => {
     const t = setTimeout(() => setCanBegin(true), 4500);
     return () => clearTimeout(t);
   }, []);
 
-  const bg = chromeBg(level.bg);
+  // After mount, morph the background from the tapped tile's colour
+  // into the round's dark chrome — visually continuous with the home card.
+  useEffect(() => {
+    const t = setTimeout(() => setBgNow(targetBg), 30);
+    return () => clearTimeout(t);
+  }, [targetBg]);
+
   const textStrong = "rgba(255,255,255,0.95)";
   const textBorder = "rgba(255,255,255,0.45)";
 
   return (
     <div
-      className="min-h-screen flex justify-center screen-in"
-      style={{ background: bg }}
+      className="min-h-screen flex justify-center"
+      style={{
+        background: bgNow,
+        transition: "background 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center">
