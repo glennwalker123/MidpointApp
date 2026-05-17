@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">midpoint</string>
+    <string name="title_activity_main">midpoint</string>
+    <string name="package_name">com.glennwalker.midpoint</string>
+    <string name="custom_url_scheme">com.glennwalker.midpoint</string>
+</resources>

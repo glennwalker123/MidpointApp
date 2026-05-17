@@ -79,7 +79,12 @@ If asked to change volumes, the current balance (set carefully): ambient noise i
 
 ## Deployment
 
-Vite app. `npm run build` outputs `dist/`. Drop on Netlify or connect to Vercel.
+Two targets share one codebase:
+
+- **Web (GitHub Pages)** — `npm run build` outputs `dist/` with base `/MidpointApp/`. The repo's `.github/workflows/deploy.yml` builds + deploys to `https://glennwalker123.github.io/MidpointApp/` on every push.
+- **Native (Capacitor)** — wrapped as iOS/Android apps. `npm run cap:sync` runs `vite build --mode native` (root base) and copies into the native projects. `npm run cap:open:android` opens Android Studio. iOS not yet scaffolded.
+
+App identity (in `capacitor.config.json`): appId `com.glennwalker.midpoint`, appName `midpoint`. Both can be changed before first store submission.
 
 ## File map
 
