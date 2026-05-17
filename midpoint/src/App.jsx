@@ -185,7 +185,7 @@ class AudioEngine {
 
     const noiseGain = this.ctx.createGain();
     noiseGain.gain.setValueAtTime(0, t);
-    noiseGain.gain.linearRampToValueAtTime(0.11, t + 6); // very slow fade in
+    noiseGain.gain.linearRampToValueAtTime(0.06, t + 6); // very slow fade in
 
     noiseSrc.connect(filter);
     filter.connect(noiseGain);
@@ -330,7 +330,7 @@ class AudioEngine {
       // Master gain with slow attack
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.030, t + 0.7);
+      gain.gain.linearRampToValueAtTime(0.060, t + 0.7);
 
       // Fast tremolo (~3.3s cycle) — surface texture, like a held breath
       const tremLfo = this.ctx.createOscillator();
@@ -348,7 +348,7 @@ class AudioEngine {
       breathLfo.type = "sine";
       breathLfo.frequency.value = 0.1;
       const breathLfoGain = this.ctx.createGain();
-      breathLfoGain.gain.value = 0.014;
+      breathLfoGain.gain.value = 0.022;
       breathLfo.connect(breathLfoGain);
       breathLfoGain.connect(gain.gain);
 
@@ -645,7 +645,7 @@ const LEVELS = [
     id: 9,
     name: "Beast",
     description: "What was taken from living things. The oldest reds and a few darker stories.",
-    intro: "Where the flower round was plants, this is animals. For most of recorded history, the deepest reds came from crushed insects, the deepest purples from sea snails, the inks from squid and the blacks from charred bone. Every great colour of antiquity has a body behind it.",
+    intro: "Where the flower chapter was plants, this is animals. For most of recorded history, the deepest reds came from crushed insects, the deepest purples from sea snails, the inks from squid and the blacks from charred bone. Every great colour of antiquity has a body behind it.",
     bg: { l: 0.07, c: 0.025, h: 10 }, // bloody warm
     challenges: [
       { a: { l: 0.35, c: 0.20, h: 15 }, b: { l: 0.55, c: 0.24, h: 25 },
@@ -693,7 +693,7 @@ const LEVELS = [
     id: 11,
     name: "Garden",
     description: "The widest hue family. The one the eye reads least precisely.",
-    intro: "Of all the colour families, green is the one the eye distinguishes least well — a quirk of perception known since the 1940s. So this round will feel harder than the others, and that is not your fault. It is a hundred-year-old finding of vision science. Take your time.",
+    intro: "Of all the colour families, green is the one the eye distinguishes least well — a quirk of perception known since the 1940s. So this chapter will feel harder than the others, and that is not your fault. It is a hundred-year-old finding of vision science. Take your time.",
     bg: { l: 0.07, c: 0.025, h: 140 }, // deep forest
     challenges: [
       { a: { l: 0.55, c: 0.12, h: 110 }, b: { l: 0.75, c: 0.08, h: 130 },
@@ -764,7 +764,7 @@ const ONBOARDING_SLIDES = [
   },
   {
     title: "Slow looking.",
-    body: "Your eye drifts with sleep, with light, with mood. Each round trains attention, not competence. There are no wrong answers — only honest ones.",
+    body: "Your eye drifts with sleep, with light, with mood. Each chapter trains attention, not competence. There are no wrong answers — only honest ones.",
     bg: { l: 0.84, c: 0.032, h: 150 },
   },
   {
@@ -889,7 +889,12 @@ export default function App() {
   function enterLevel(id) {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
-    setScreen({ name: "level", levelId: id });
+    const go = () => setScreen({ name: "level", levelId: id });
+    if (typeof document !== "undefined" && document.startViewTransition) {
+      document.startViewTransition(go);
+    } else {
+      go();
+    }
   }
 
   function exitLevel(wasCompleted, id) {
@@ -940,6 +945,13 @@ export default function App() {
           to   { opacity: 1; }
         }
         .screen-in { animation: screenIn 0.9s ease both; }
+
+        /* Slow the default cross-fade for the home → intro tile morph */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+          animation-duration: 1.0s;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
 
         @keyframes hintPulse {
           0%, 100% { opacity: 0.3; }
@@ -1295,7 +1307,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
               <button
                 key={level.id}
                 disabled={isLocked}
-                aria-label={isLocked ? `Round ${level.id}, locked` : level.name}
+                aria-label={isLocked ? `Chapter ${level.id}, locked` : level.name}
                 onClick={() => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
@@ -1308,6 +1320,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
                   height: "108px",
                   background: isLocked ? lockedBg : oklchStr(tileCol),
                   animationDelay: `${0.15 + i * 0.05}s`,
+                  viewTransitionName: isLocked ? undefined : `tile-${level.id}`,
                 }}
               >
                 <span
@@ -1785,45 +1798,41 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
 
 function IntroScreen({ level, audio, onBegin }) {
   const [canBegin, setCanBegin] = useState(false);
-  const targetBg = chromeBg(level.bg);
-  const startBg = oklchStr(roundColor(level));
-  const [bgNow, setBgNow] = useState(startBg);
+  const bg = roundColor(level);
+  const bgStr = oklchStr(bg);
+  const textStrong = labelOn(bg, true);
+  const textSoft = labelOn(bg);
 
   useEffect(() => {
     const t = setTimeout(() => setCanBegin(true), 4500);
     return () => clearTimeout(t);
   }, []);
 
-  // After mount, morph the background from the tapped tile's colour
-  // into the round's dark chrome — visually continuous with the home card.
-  useEffect(() => {
-    const t = setTimeout(() => setBgNow(targetBg), 30);
-    return () => clearTimeout(t);
-  }, [targetBg]);
-
-  const textStrong = "rgba(255,255,255,0.95)";
-  const textBorder = "rgba(255,255,255,0.45)";
-
   return (
     <div
       className="min-h-screen flex justify-center"
       style={{
-        background: bgNow,
-        transition: "background 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+        background: bgStr,
+        viewTransitionName: `tile-${level.id}`,
       }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center">
           <div
-            className="text-[11px] tracking-[0.4em] uppercase text-white/35 mb-8 fade-up"
-            style={{ animationDelay: "0.4s", animationDuration: "1.4s" }}
+            className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
+            style={{
+              color: textSoft,
+              animationDelay: "0.4s",
+              animationDuration: "1.4s",
+            }}
           >
-            Round {String(level.id).padStart(2, "0")}
+            Chapter {String(level.id).padStart(2, "0")}
           </div>
 
           <h1
-            className="font-display italic text-white/95 leading-none mb-12 fade-up"
+            className="font-display italic leading-none mb-12 fade-up"
             style={{
+              color: textStrong,
               animationDelay: "1.2s",
               animationDuration: "1.8s",
               fontSize: "clamp(3.4rem, 14vw, 5.2rem)",
@@ -1833,8 +1842,9 @@ function IntroScreen({ level, audio, onBegin }) {
           </h1>
 
           <p
-            className="font-display italic text-white/70 leading-relaxed max-w-sm fade-up"
+            className="font-display italic leading-relaxed max-w-sm fade-up"
             style={{
+              color: textSoft,
               animationDelay: "2.6s",
               animationDuration: "1.8s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.08rem)",
@@ -1849,7 +1859,7 @@ function IntroScreen({ level, audio, onBegin }) {
             audio={audio}
             onClick={onBegin}
             textColor={textStrong}
-            borderColor={textBorder}
+            borderColor={textSoft}
             delay={4.5}
             disabled={!canBegin}
           >

@@ -47,7 +47,7 @@ The audio is part of the design, not decoration. Five layers:
 
 Plus button events: `buttonArrival` (G3, slow attack) when a button fades in, `buttonTap` (G4, brief) on press.
 
-If asked to change volumes, the current balance (set carefully): ambient is the foundation (~0.11 noise, ~0.04 sub offset), touch tone sits above it (~0.03 peak), button events soft (~0.14–0.20), lock-in is the loudest discrete event (~0.35).
+If asked to change volumes, the current balance (set carefully): ambient noise is quiet (~0.06 noise, ~0.04 sub offset) so the touch tone is the felt sound, touch tone peaks at ~0.06 with a ~0.022 resonant-breath LFO depth, button events soft (~0.14–0.20), lock-in is the loudest discrete event (~0.35).
 
 ## UI patterns to keep consistent
 
