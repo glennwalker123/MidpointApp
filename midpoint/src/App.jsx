@@ -1339,7 +1339,12 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
             const tileCol = roundColor(level);
             const tileText = labelOn(tileCol, true);
             const tileTextSoft = labelOn(tileCol);
-            const lockedBg = "oklch(0.78 0.008 80)";
+            // Locked tiles use the complement of the home palette:
+            // bg is hue 80 (warm), so the lock-state hue is 260 (cool muted purple).
+            // Matches lightness range of the surrounding bg but distinctly cool.
+            const lockedBg = "oklch(0.74 0.028 260)";
+            const lockedTextSoft = "oklch(0.34 0.024 260)";
+            const lockedIconStroke = "oklch(0.44 0.026 260)";
             return (
               <button
                 key={level.id}
@@ -1387,7 +1392,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                   >
                     <span
                       className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
-                      style={{ color: CREAM_TEXT.hint }}
+                      style={{ color: lockedTextSoft }}
                     >
                       {String(level.id).padStart(2, "0")}
                     </span>
@@ -1400,13 +1405,13 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                             width="10"
                             height="8"
                             rx="0.5"
-                            stroke={CREAM_TEXT.soft}
+                            stroke={lockedIconStroke}
                             strokeWidth="1"
                             fill="none"
                           />
                           <path
                             d="M4 8V5a3 3 0 0 1 6 0v3"
-                            stroke={CREAM_TEXT.soft}
+                            stroke={lockedIconStroke}
                             strokeWidth="1"
                             fill="none"
                             strokeLinecap="round"
