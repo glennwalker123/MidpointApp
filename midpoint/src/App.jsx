@@ -858,10 +858,33 @@ function readOnboarded() {
   }
 }
 
-export default function App() {
-  const [screen, setScreen] = useState(() =>
-    readOnboarded() ? { name: "home" } : { name: "onboarding" }
+// Visiting `?reset=1` (or `?reset`) clears the onboarding flag so the
+// onboarding flow shows again — handy for sharing the app fresh.
+function consumeResetParam() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("reset")) return false;
+  try {
+    localStorage.removeItem(ONBOARDED_KEY);
+  } catch {
+    // ignore
+  }
+  params.delete("reset");
+  const qs = params.toString();
+  window.history.replaceState(
+    {},
+    "",
+    window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash
   );
+  return true;
+}
+
+export default function App() {
+  const [screen, setScreen] = useState(() => {
+    const wasReset = consumeResetParam();
+    if (wasReset) return { name: "onboarding" };
+    return readOnboarded() ? { name: "home" } : { name: "onboarding" };
+  });
   const [completed, setCompleted] = useState(new Set());
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
