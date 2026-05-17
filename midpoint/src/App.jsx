@@ -845,60 +845,6 @@ function rate(score) {
 }
 
 // ============================================================================
-// EXPANDING TILE — fixed-position overlay that flips from the tapped tile's
-// rect to fullscreen, masking the screen swap underneath.
-// ============================================================================
-
-function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
-  const [expanded, setExpanded] = useState(false);
-  // Snapshot the viewport at mount so the end-state has explicit pixel values
-  // that CSS can interpolate from the start rect. Avoids `auto` / `100vw`
-  // edge cases (mobile address-bar height, etc.).
-  const [viewport] = useState(() => ({
-    w: typeof window !== "undefined" ? window.innerWidth : 0,
-    h: typeof window !== "undefined" ? window.innerHeight : 0,
-  }));
-
-  useEffect(() => {
-    // Two RAFs so the browser paints the initial rect before transitioning.
-    let raf2;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setExpanded(true));
-    });
-    const t = setTimeout(onDone, duration + 50);
-    return () => {
-      cancelAnimationFrame(raf1);
-      if (raf2) cancelAnimationFrame(raf2);
-      clearTimeout(t);
-    };
-  }, [duration, onDone]);
-
-  const sizing = expanded
-    ? { left: 0, top: 0, width: viewport.w, height: viewport.h }
-    : {
-        left: fromRect.x,
-        top: fromRect.y,
-        width: fromRect.width,
-        height: fromRect.height,
-      };
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        background: color,
-        transitionProperty: "left, top, width, height",
-        transitionDuration: `${duration}ms`,
-        transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-        zIndex: 100,
-        pointerEvents: "none",
-        ...sizing,
-      }}
-    />
-  );
-}
-
-// ============================================================================
 // APP
 // ============================================================================
 
@@ -919,7 +865,6 @@ export default function App() {
   const [completed, setCompleted] = useState(new Set());
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
-  const [morph, setMorph] = useState(null);
   const audioRef = useRef(null);
 
   if (!audioRef.current) {
@@ -941,15 +886,10 @@ export default function App() {
     setScreen({ name: "home" });
   }
 
-  function enterLevel(id, fromRect, color) {
+  function enterLevel(id) {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
-    if (fromRect && color) {
-      setMorph({ id, fromRect, color });
-      setScreen({ name: "level", levelId: id });
-    } else {
-      setScreen({ name: "level", levelId: id });
-    }
+    setScreen({ name: "level", levelId: id });
   }
 
   function exitLevel(wasCompleted, id) {
@@ -1079,14 +1019,6 @@ export default function App() {
           />
         )}
       </div>
-
-      {morph && (
-        <ExpandingTile
-          color={morph.color}
-          fromRect={morph.fromRect}
-          onDone={() => setMorph(null)}
-        />
-      )}
     </>
   );
 }
@@ -1382,16 +1314,10 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
                 key={level.id}
                 disabled={isLocked}
                 aria-label={isLocked ? `Chapter ${level.id}, locked` : level.name}
-                onClick={(e) => {
+                onClick={() => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
-                  const r = e.currentTarget.getBoundingClientRect();
-                  onSelect(level.id, {
-                    x: r.x,
-                    y: r.y,
-                    width: r.width,
-                    height: r.height,
-                  }, oklchStr(tileCol));
+                  onSelect(level.id);
                 }}
                 className={`relative w-full fade-up transition-transform ${
                   isLocked ? "cursor-not-allowed" : "active:scale-[0.99]"
@@ -1878,15 +1804,15 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
 
 function IntroScreen({ level, audio, onBegin, onExit }) {
   const [canBegin, setCanBegin] = useState(false);
-  const bg = roundColor(level);
-  const bgStr = oklchStr(bg);
-  const textStrong = labelOn(bg, true);
-  const textSoft = labelOn(bg);
 
   useEffect(() => {
     const t = setTimeout(() => setCanBegin(true), 4500);
     return () => clearTimeout(t);
   }, []);
+
+  const bg = chromeBg(level.bg);
+  const textStrong = "rgba(255,255,255,0.95)";
+  const textBorder = "rgba(255,255,255,0.45)";
 
   function handleExit() {
     if (audio) audio.buttonTap();
@@ -1895,20 +1821,20 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 
   return (
     <div
-      className="min-h-screen flex justify-center"
-      style={{ background: bgStr }}
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: bg }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <button
           onClick={handleExit}
           aria-label="Exit chapter"
           className="self-start -ml-1 mb-6 w-10 h-10 flex items-center justify-center fade-up"
-          style={{ animationDelay: "0.2s", animationDuration: "1.2s" }}
+          style={{ animationDelay: "4.5s", animationDuration: "1.4s" }}
         >
           <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
             <path
               d="M7 1L1 7l6 6M1 7h20"
-              stroke={textSoft}
+              stroke={textBorder}
               strokeWidth="1"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1917,20 +1843,15 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
         </button>
         <div className="flex-1 flex flex-col justify-center">
           <div
-            className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
-            style={{
-              color: textSoft,
-              animationDelay: "0.4s",
-              animationDuration: "1.4s",
-            }}
+            className="text-[11px] tracking-[0.4em] uppercase text-white/35 mb-8 fade-up"
+            style={{ animationDelay: "0.4s", animationDuration: "1.4s" }}
           >
             Chapter {String(level.id).padStart(2, "0")}
           </div>
 
           <h1
-            className="font-display italic leading-none mb-12 fade-up"
+            className="font-display italic text-white/95 leading-none mb-12 fade-up"
             style={{
-              color: textStrong,
               animationDelay: "1.2s",
               animationDuration: "1.8s",
               fontSize: "clamp(3.4rem, 14vw, 5.2rem)",
@@ -1940,9 +1861,8 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           </h1>
 
           <p
-            className="font-display italic leading-relaxed max-w-sm fade-up"
+            className="font-display italic text-white/70 leading-relaxed max-w-sm fade-up"
             style={{
-              color: textSoft,
               animationDelay: "2.6s",
               animationDuration: "1.8s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.08rem)",
@@ -1957,7 +1877,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
             audio={audio}
             onClick={onBegin}
             textColor={textStrong}
-            borderColor={textSoft}
+            borderColor={textBorder}
             delay={4.5}
             disabled={!canBegin}
           >
