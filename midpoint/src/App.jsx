@@ -1888,15 +1888,16 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 // modified. `style` positions it onto the boundary.
 function WaveBoundary({ topColor, bottomColor, style, dur = "11s", begin = "0s" }) {
   const VB_W = 100;
-  const VB_H = 28;
+  const VB_H = 14;
   // 4 wave snapshots cycling smoothly. Each row defines the wave's y-values at
   // x=100, the right Q-control y, the midpoint y, and the left endpoint y.
+  // Small swings — the wave should read as a gentle ripple, not motion.
   const waves = [
-    { y100: 14, c2y: 22, mid: 14, y0: 14 },
-    { y100: 11, c2y: 17, mid: 17, y0: 11 },
-    { y100: 16, c2y: 24, mid: 12, y0: 16 },
-    { y100: 13, c2y: 19, mid: 15, y0: 13 },
-    { y100: 14, c2y: 22, mid: 14, y0: 14 },
+    { y100: 7, c2y: 9, mid: 7, y0: 7 },
+    { y100: 6, c2y: 8, mid: 8, y0: 6 },
+    { y100: 8, c2y: 10, mid: 6, y0: 8 },
+    { y100: 7, c2y: 9, mid: 7, y0: 7 },
+    { y100: 7, c2y: 9, mid: 7, y0: 7 },
   ];
   const topD = (w) =>
     `M 0 0 L ${VB_W} 0 L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
@@ -2054,14 +2055,14 @@ function ChallengeView({
           <WaveBoundary
             topColor={oklchStr(challenge.a)}
             bottomColor={oklchStr(candidateCol)}
-            style={{ top: "calc(33.333% - 14px)" }}
+            style={{ top: "calc(33.333% - 7px)" }}
             dur="11s"
             begin="0s"
           />
           <WaveBoundary
             topColor={oklchStr(candidateCol)}
             bottomColor={oklchStr(challenge.b)}
-            style={{ top: "calc(66.666% - 14px)" }}
+            style={{ top: "calc(66.666% - 7px)" }}
             dur="13s"
             begin="-3s"
           />
