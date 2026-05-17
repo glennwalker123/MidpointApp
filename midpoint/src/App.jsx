@@ -953,24 +953,6 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
-        /* Liquid shimmer — slow drifting highlight inside a colour band.
-           Visible but still slow enough to read as breathing, not motion. */
-        @keyframes liquidShift {
-          0%   { transform: translate(-9%, -6%) scale(1.05); }
-          50%  { transform: translate(7%,  8%) scale(1.18); }
-          100% { transform: translate(-3%, 2%) scale(1.02); }
-        }
-        .liquid-band {
-          position: absolute;
-          inset: -10%;
-          pointer-events: none;
-          background:
-            radial-gradient(ellipse 70% 45% at 28% 22%, rgba(255,255,255,0.35), transparent 60%),
-            radial-gradient(ellipse 65% 42% at 78% 82%, rgba(0,0,0,0.286), transparent 60%),
-            radial-gradient(ellipse 55% 38% at 55% 55%, rgba(255,255,255,0.191), transparent 65%);
-          mix-blend-mode: overlay;
-          animation: liquidShift 9.9s ease-in-out infinite alternate;
-        }
 
         /* Breath cycle: 4s inhale → 4s hold → 4s exhale */
         /* removed */
@@ -1864,7 +1846,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
             className="h-14 w-14 flex items-center justify-center border transition-all duration-500 active:scale-[0.98] fade-up flex-shrink-0"
             style={{
               borderColor: textBorder,
-              animationDelay: "0.18s",
+              animationDelay: "4.05s",
               animationDuration: "1.26s",
             }}
           >
@@ -1900,6 +1882,70 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 // CHALLENGE VIEW
 // ============================================================================
 
+// Wavy boundary between two colour bands. The SVG sits centred on the
+// boundary line and the *only* thing it draws is two pure-colour regions
+// separated by an animated curve — the bands' colours themselves are never
+// modified. `style` positions it onto the boundary.
+function WaveBoundary({ topColor, bottomColor, style, dur = "11s", begin = "0s" }) {
+  const VB_W = 100;
+  const VB_H = 28;
+  // 4 wave snapshots cycling smoothly. Each row defines the wave's y-values at
+  // x=100, the right Q-control y, the midpoint y, and the left endpoint y.
+  const waves = [
+    { y100: 14, c2y: 22, mid: 14, y0: 14 },
+    { y100: 11, c2y: 17, mid: 17, y0: 11 },
+    { y100: 16, c2y: 24, mid: 12, y0: 16 },
+    { y100: 13, c2y: 19, mid: 15, y0: 13 },
+    { y100: 14, c2y: 22, mid: 14, y0: 14 },
+  ];
+  const topD = (w) =>
+    `M 0 0 L ${VB_W} 0 L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
+  const bottomD = (w) =>
+    `M 0 ${VB_H} L ${VB_W} ${VB_H} L ${VB_W} ${w.y100} Q 75 ${w.c2y} 50 ${w.mid} T 0 ${w.y0} Z`;
+  const topVals = waves.map(topD).join(";");
+  const bottomVals = waves.map(bottomD).join(";");
+  return (
+    <svg
+      preserveAspectRatio="none"
+      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        width: "100%",
+        height: `${VB_H}px`,
+        pointerEvents: "none",
+        ...style,
+      }}
+    >
+      <path d={topD(waves[0])} fill={topColor}>
+        <animate
+          attributeName="d"
+          values={topVals}
+          dur={dur}
+          begin={begin}
+          repeatCount="indefinite"
+          calcMode="spline"
+          keyTimes="0;0.25;0.5;0.75;1"
+          keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
+        />
+      </path>
+      <path d={bottomD(waves[0])} fill={bottomColor}>
+        <animate
+          attributeName="d"
+          values={bottomVals}
+          dur={dur}
+          begin={begin}
+          repeatCount="indefinite"
+          calcMode="spline"
+          keyTimes="0;0.25;0.5;0.75;1"
+          keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
+        />
+      </path>
+    </svg>
+  );
+}
+
 function ChallengeView({
   level, challenge, challengeIdx, total, phase, position,
   candidateCol, truthCol, score, distance, hasInteracted, hasReleased, isDragging,
@@ -1934,18 +1980,16 @@ function ChallengeView({
     >
       <div className="relative w-full max-w-md text-white select-none" style={{ minHeight: "100vh" }}>
         <div
-          className="grid w-full"
+          className="relative grid w-full"
           style={{
             gridTemplateRows: "1fr 1fr 1fr",
             height: "100vh",
           }}
         >
           <div
-            className="relative w-full overflow-hidden"
+            className="w-full"
             style={{ background: oklchStr(challenge.a), transition: "background 1.44s ease" }}
-          >
-            <div className="liquid-band" />
-          </div>
+          />
 
           <div className="relative w-full overflow-hidden">
             {phase === "play" ? (
@@ -1960,10 +2004,6 @@ function ChallengeView({
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
               >
-                <div
-                  className="liquid-band"
-                  style={{ animationDuration: "16.2s", animationDelay: "-3.6s" }}
-                />
                 {!hasInteracted && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
@@ -2007,14 +2047,24 @@ function ChallengeView({
           </div>
 
           <div
-            className="relative w-full overflow-hidden"
+            className="w-full"
             style={{ background: oklchStr(challenge.b), transition: "background 1.44s ease" }}
-          >
-            <div
-              className="liquid-band"
-              style={{ animationDuration: "14.4s", animationDelay: "-6.3s" }}
-            />
-          </div>
+          />
+
+          <WaveBoundary
+            topColor={oklchStr(challenge.a)}
+            bottomColor={oklchStr(candidateCol)}
+            style={{ top: "calc(33.333% - 14px)" }}
+            dur="11s"
+            begin="0s"
+          />
+          <WaveBoundary
+            topColor={oklchStr(candidateCol)}
+            bottomColor={oklchStr(challenge.b)}
+            style={{ top: "calc(66.666% - 14px)" }}
+            dur="13s"
+            begin="-3s"
+          />
         </div>
 
         {/* Floating bar — slides up from below on first release. Transparent, sits over band B. */}
