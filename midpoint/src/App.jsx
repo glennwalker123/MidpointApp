@@ -768,6 +768,11 @@ const ONBOARDING_SLIDES = [
     bg: { l: 0.84, c: 0.032, h: 150 },
   },
   {
+    title: "Twelve chapters.",
+    body: "The journey moves through twelve themed worlds — earth, sea, bloom, stone, and on. Each holds five colours with names and short histories that reveal themselves only after you have found their middle. Finish one to open the next.",
+    bg: { l: 0.83, c: 0.040, h: 320 },
+  },
+  {
     title: "Begin.",
     body: "Use headphones if you have them. The sound is part of the design.",
     bg: { l: 0.83, c: 0.045, h: 35 },
@@ -1519,6 +1524,15 @@ function About({ onBack, audio }) {
               carefully. The reflection screens are not decoration: learning
               the names of colours quietly changes how you see them over
               time.
+            </p>
+
+            <p>
+              The journey is shaped as twelve themed chapters — earth, sea,
+              bloom, stone, and on. Each one holds five colours, every one
+              carrying a name and a small history. Some are older than
+              language; some are mistakes that became famous. The names
+              reveal themselves only after you have found their middle, and
+              the chapters open one at a time.
             </p>
 
             <p>
