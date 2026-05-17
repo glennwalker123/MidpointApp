@@ -739,16 +739,16 @@ const LEVELS = [
   },
 ];
 
-const HOME_BG = { l: 0.94, c: 0.012, h: 80 }; // warm cream — unbleached cotton
+const HOME_BG = { l: 0.88, c: 0.028, h: 80 }; // warm beige — matches onboarding slide 1
 
 // Tinted darks for use on the cream background — warm, never harsh
 const CREAM_TEXT = {
-  strong: "oklch(0.18 0.025 80)",   // titles, primary
-  body:   "oklch(0.30 0.020 80)",   // paragraphs
-  soft:   "oklch(0.46 0.018 80)",   // small labels, descriptions
-  hint:   "oklch(0.60 0.014 80)",   // subtle hints
-  border: "oklch(0.82 0.014 80)",   // soft dividing lines
-  borderStrong: "oklch(0.62 0.018 80)",
+  strong: "oklch(0.15 0.025 80)",   // titles, primary (matches labelOn(bg, true))
+  body:   "oklch(0.28 0.020 80)",   // paragraphs
+  soft:   "oklch(0.4 0.020 80)",    // small labels, descriptions (matches labelOn(bg))
+  hint:   "oklch(0.55 0.014 80)",   // subtle hints
+  border: "oklch(0.74 0.014 80)",   // soft dividing lines
+  borderStrong: "oklch(0.55 0.018 80)",
 };
 
 const ONBOARDING_SLIDES = [
@@ -888,6 +888,7 @@ export default function App() {
   const [completed, setCompleted] = useState(new Set());
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
+  const [unlocking, setUnlocking] = useState(null);
   const audioRef = useRef(null);
 
   if (!audioRef.current) {
@@ -906,6 +907,8 @@ export default function App() {
     } catch {
       // ignore — onboarding will simply re-show on next visit
     }
+    // First arrival on Home: animate chapter 1's colour sweeping over the grey.
+    setUnlocking(1);
     setScreen({ name: "home" });
   }
 
@@ -923,6 +926,9 @@ export default function App() {
         next.add(id);
         return next;
       });
+      // If a next chapter exists, animate its colour over the grey on return.
+      const nextLevel = LEVELS.find((l) => l.id === id + 1);
+      if (nextLevel) setUnlocking(nextLevel.id);
     }
     setScreen({ name: "home" });
   }
@@ -976,6 +982,15 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
+        /* Colour-sweeping-over-grey for newly unlocked chapters */
+        @keyframes unlockSweep {
+          from { clip-path: inset(0 0 0 0%); }
+          to   { clip-path: inset(0 0 0 100%); }
+        }
+        .unlock-sweep {
+          animation: unlockSweep 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
+        }
+
 
         /* Breath cycle: 4s inhale → 4s hold → 4s exhale */
         /* removed */
@@ -999,6 +1014,8 @@ export default function App() {
             onOpenSettings={() => setScreen({ name: "settings" })}
             completed={completed}
             audio={audioRef.current}
+            unlocking={unlocking}
+            onUnlockingDone={() => setUnlocking(null)}
           />
         )}
         {screen.name === "about" && (
@@ -1280,7 +1297,7 @@ function Onboarding({ onDone, audio }) {
 // HOME
 // ============================================================================
 
-function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
+function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocking, onUnlockingDone }) {
   function openAbout() {
     if (audio) audio.buttonTap();
     onOpenAbout();
@@ -1289,6 +1306,13 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
     if (audio) audio.buttonTap();
     onOpenSettings();
   }
+
+  // Clear the unlocking flag after the sweep finishes (delay 0.6s + 1.8s anim + small buffer)
+  useEffect(() => {
+    if (unlocking == null || !onUnlockingDone) return;
+    const t = setTimeout(() => onUnlockingDone(), 2700);
+    return () => clearTimeout(t);
+  }, [unlocking, onUnlockingDone]);
 
   return (
     <div
@@ -1311,75 +1335,86 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
           {LEVELS.map((level, i) => {
             const isDone = completed.has(level.id);
             const isLocked = i > 0 && !completed.has(LEVELS[i - 1].id);
+            const isUnlocking = unlocking === level.id;
             const tileCol = roundColor(level);
             const tileText = labelOn(tileCol, true);
             const tileTextSoft = labelOn(tileCol);
-            const lockedBg = "oklch(0.86 0.008 80)";
+            const lockedBg = "oklch(0.78 0.008 80)";
             return (
               <button
                 key={level.id}
-                disabled={isLocked}
+                disabled={isLocked && !isUnlocking}
                 aria-label={isLocked ? `Chapter ${level.id}, locked` : level.name}
                 onClick={() => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
                   onSelect(level.id);
                 }}
-                className={`relative w-full fade-up transition-transform ${
-                  isLocked ? "cursor-not-allowed" : "active:scale-[0.99]"
+                className={`relative w-full overflow-hidden fade-up transition-transform ${
+                  isLocked && !isUnlocking ? "cursor-not-allowed" : "active:scale-[0.99]"
                 }`}
                 style={{
                   height: "108px",
-                  background: isLocked ? lockedBg : oklchStr(tileCol),
+                  background: oklchStr(tileCol),
                   animationDelay: `${0.15 + i * 0.05}s`,
                 }}
               >
                 <span
                   className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
-                  style={{ color: isLocked ? CREAM_TEXT.hint : tileTextSoft }}
+                  style={{ color: tileTextSoft }}
                 >
                   {String(level.id).padStart(2, "0")}
                 </span>
-                {isDone && !isLocked && (
+                {isDone && (
                   <span
                     className="absolute top-4 right-5 block w-1.5 h-1.5 rounded-full"
                     style={{ background: tileText }}
                     aria-label="completed"
                   />
                 )}
-                {!isLocked && (
-                  <span
-                    className="absolute bottom-4 left-5 right-5 text-left font-display italic leading-none"
-                    style={{ color: tileText, fontSize: "28px" }}
-                  >
-                    {level.name}
-                  </span>
-                )}
-                {isLocked && (
-                  <span
-                    className="absolute bottom-4 right-5"
+                <span
+                  className="absolute bottom-4 left-5 right-5 text-left font-display italic leading-none"
+                  style={{ color: tileText, fontSize: "28px" }}
+                >
+                  {level.name}
+                </span>
+
+                {(isLocked || isUnlocking) && (
+                  <div
+                    className={`absolute inset-0 ${isUnlocking ? "unlock-sweep" : ""}`}
+                    style={{ background: lockedBg }}
                     aria-hidden="true"
                   >
-                    <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
-                      <rect
-                        x="2"
-                        y="8"
-                        width="10"
-                        height="8"
-                        rx="0.5"
-                        stroke={CREAM_TEXT.soft}
-                        strokeWidth="1"
-                        fill="none"
-                      />
-                      <path
-                        d="M4 8V5a3 3 0 0 1 6 0v3"
-                        stroke={CREAM_TEXT.soft}
-                        strokeWidth="1"
-                        fill="none"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </span>
+                    <span
+                      className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
+                      style={{ color: CREAM_TEXT.hint }}
+                    >
+                      {String(level.id).padStart(2, "0")}
+                    </span>
+                    {isLocked && !isUnlocking && (
+                      <span className="absolute bottom-4 right-5">
+                        <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
+                          <rect
+                            x="2"
+                            y="8"
+                            width="10"
+                            height="8"
+                            rx="0.5"
+                            stroke={CREAM_TEXT.soft}
+                            strokeWidth="1"
+                            fill="none"
+                          />
+                          <path
+                            d="M4 8V5a3 3 0 0 1 6 0v3"
+                            stroke={CREAM_TEXT.soft}
+                            strokeWidth="1"
+                            fill="none"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
                 )}
               </button>
             );
