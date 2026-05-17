@@ -248,7 +248,7 @@ class AudioEngine {
         subLfo.stop();
         subOffset.stop();
       } catch (e) {}
-    }, 3500);
+    }, 3150);
 
     this.ambientNodes = null;
   }
@@ -920,38 +920,38 @@ export default function App() {
           from { width: 0%; }
           to   { width: 50%; }
         }
-        .push-yours { animation: pushYours 1.3s cubic-bezier(0.65, 0, 0.35, 1) both; }
-        .push-truth { animation: pushTruth 1.3s cubic-bezier(0.65, 0, 0.35, 1) both; }
+        .push-yours { animation: pushYours 1.17s cubic-bezier(0.65, 0, 0.35, 1) both; }
+        .push-truth { animation: pushTruth 1.17s cubic-bezier(0.65, 0, 0.35, 1) both; }
 
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .fade-up { animation: fadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .fade-up { animation: fadeUp 1.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
         @keyframes fadeIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        .fade-in { animation: fadeIn 1.0s ease both; }
+        .fade-in { animation: fadeIn 0.9s ease both; }
 
         @keyframes screenIn {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        .screen-in { animation: screenIn 0.9s ease both; }
+        .screen-in { animation: screenIn 0.81s ease both; }
 
         @keyframes hintPulse {
           0%, 100% { opacity: 0.3; }
           50%      { opacity: 0.8; }
         }
-        .hint-pulse { animation: hintPulse 3.2s ease-in-out infinite; }
+        .hint-pulse { animation: hintPulse 2.88s ease-in-out infinite; }
 
         @keyframes drift {
           0%, 100% { transform: translateY(0); }
           50%      { transform: translateY(-4px); }
         }
-        .drift { animation: drift 6s ease-in-out infinite; }
+        .drift { animation: drift 5.4s ease-in-out infinite; }
 
         /* Liquid shimmer — slow drifting highlight inside a colour band.
            Visible but still slow enough to read as breathing, not motion. */
@@ -965,11 +965,11 @@ export default function App() {
           inset: -10%;
           pointer-events: none;
           background:
-            radial-gradient(ellipse 70% 45% at 28% 22%, rgba(255,255,255,0.22), transparent 60%),
-            radial-gradient(ellipse 65% 42% at 78% 82%, rgba(0,0,0,0.18), transparent 60%),
-            radial-gradient(ellipse 55% 38% at 55% 55%, rgba(255,255,255,0.12), transparent 65%);
+            radial-gradient(ellipse 70% 45% at 28% 22%, rgba(255,255,255,0.35), transparent 60%),
+            radial-gradient(ellipse 65% 42% at 78% 82%, rgba(0,0,0,0.286), transparent 60%),
+            radial-gradient(ellipse 55% 38% at 55% 55%, rgba(255,255,255,0.191), transparent 65%);
           mix-blend-mode: overlay;
-          animation: liquidShift 11s ease-in-out infinite alternate;
+          animation: liquidShift 9.9s ease-in-out infinite alternate;
         }
 
         /* Breath cycle: 4s inhale → 4s hold → 4s exhale */
@@ -1095,7 +1095,7 @@ function ActionButton({
       style={{
         color: textColor,
         borderColor: borderColor,
-        animation: `fadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) both`,
+        animation: `fadeUp 1.26s cubic-bezier(0.22, 1, 0.36, 1) both`,
         animationDelay: `${delay}s`,
       }}
     >
@@ -1159,7 +1159,7 @@ function Onboarding({ onDone, audio }) {
       onTouchEnd={handleTouchEnd}
       style={{
         background: oklchStr(slide.bg),
-        transition: "background 1.4s cubic-bezier(0.22, 1, 0.36, 1)",
+        transition: "background 1.26s cubic-bezier(0.22, 1, 0.36, 1)",
         touchAction: "pan-y",
       }}
     >
@@ -1187,7 +1187,7 @@ function Onboarding({ onDone, audio }) {
             style={{
               color: strong,
               fontSize: "clamp(2.8rem, 11vw, 4rem)",
-              animationDuration: "1.2s",
+              animationDuration: "1.08s",
             }}
           >
             {slide.title}
@@ -1198,8 +1198,8 @@ function Onboarding({ onDone, audio }) {
             style={{
               color: strong,
               fontSize: "clamp(1rem, 4vw, 1.12rem)",
-              animationDelay: "0.3s",
-              animationDuration: "1.4s",
+              animationDelay: "0.27s",
+              animationDuration: "1.26s",
             }}
           >
             {slide.body}
@@ -1213,7 +1213,7 @@ function Onboarding({ onDone, audio }) {
               onClick={next}
               textColor={strong}
               borderColor={strong}
-              delay={0.4}
+              delay={0.36}
             >
               Play now
             </ActionButton>
@@ -1427,8 +1427,8 @@ function About({ onBack, audio }) {
             className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
             style={{
               color: CREAM_TEXT.soft,
-              animationDelay: "0.3s",
-              animationDuration: "1.2s",
+              animationDelay: "0.27s",
+              animationDuration: "1.08s",
             }}
           >
             About
@@ -1438,8 +1438,8 @@ function About({ onBack, audio }) {
             className="font-display italic leading-[0.95] mb-10 fade-up"
             style={{
               color: CREAM_TEXT.strong,
-              animationDelay: "0.8s",
-              animationDuration: "1.6s",
+              animationDelay: "0.72s",
+              animationDuration: "1.44s",
               fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
             }}
           >
@@ -1450,8 +1450,8 @@ function About({ onBack, audio }) {
             className="font-display leading-relaxed space-y-5 max-w-sm fade-up"
             style={{
               color: CREAM_TEXT.body,
-              animationDelay: "1.4s",
-              animationDuration: "1.8s",
+              animationDelay: "1.26s",
+              animationDuration: "1.62s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
             }}
           >
@@ -1498,7 +1498,7 @@ function About({ onBack, audio }) {
             onClick={onBack}
             textColor={CREAM_TEXT.strong}
             borderColor={CREAM_TEXT.borderStrong}
-            delay={2.4}
+            delay={2.16}
           >
             Return
           </ActionButton>
@@ -1528,8 +1528,8 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
             className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
             style={{
               color: CREAM_TEXT.soft,
-              animationDelay: "0.3s",
-              animationDuration: "1.2s",
+              animationDelay: "0.27s",
+              animationDuration: "1.08s",
             }}
           >
             Settings
@@ -1538,8 +1538,8 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
             className="font-display italic leading-[0.95] mb-12 fade-up"
             style={{
               color: CREAM_TEXT.strong,
-              animationDelay: "0.8s",
-              animationDuration: "1.6s",
+              animationDelay: "0.72s",
+              animationDuration: "1.44s",
               fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
             }}
           >
@@ -1552,8 +1552,8 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
             style={{
               color: CREAM_TEXT.body,
               borderColor: CREAM_TEXT.border,
-              animationDelay: "1.4s",
-              animationDuration: "1.6s",
+              animationDelay: "1.26s",
+              animationDuration: "1.44s",
             }}
           >
             <span className="text-[11px] tracking-[0.3em] uppercase">
@@ -1570,7 +1570,7 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
             onClick={onBack}
             textColor={CREAM_TEXT.strong}
             borderColor={CREAM_TEXT.borderStrong}
-            delay={2.0}
+            delay={1.8}
           >
             Return
           </ActionButton>
@@ -1669,7 +1669,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
     setTimeout(() => {
       setPhase("reflection");
       setExpansion(null);
-    }, 1500);
+    }, 1350);
   }
 
   function continueFromReflection() {
@@ -1717,7 +1717,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
     if (phase !== "reveal") return;
     const t = setTimeout(() => {
       continueFromReveal();
-    }, 4000);
+    }, 3600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -1790,7 +1790,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
             height: expansion.fullscreen ? "100vh" : `${expansion.box.height}px`,
             background: oklchStr(expansion.color),
             transition: expansion.fullscreen
-              ? "top 1.4s cubic-bezier(0.65, 0, 0.35, 1), left 1.4s cubic-bezier(0.65, 0, 0.35, 1), width 1.4s cubic-bezier(0.65, 0, 0.35, 1), height 1.4s cubic-bezier(0.65, 0, 0.35, 1)"
+              ? "top 1.26s cubic-bezier(0.65, 0, 0.35, 1), left 1.26s cubic-bezier(0.65, 0, 0.35, 1), width 1.26s cubic-bezier(0.65, 0, 0.35, 1), height 1.26s cubic-bezier(0.65, 0, 0.35, 1)"
               : "none",
           }}
         />
@@ -1807,7 +1807,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
   const [canBegin, setCanBegin] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setCanBegin(true), 4500);
+    const t = setTimeout(() => setCanBegin(true), 4050);
     return () => clearTimeout(t);
   }, []);
 
@@ -1830,7 +1830,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           onClick={handleExit}
           aria-label="Exit chapter"
           className="self-start -ml-1 mb-6 w-10 h-10 flex items-center justify-center fade-up"
-          style={{ animationDelay: "4.5s", animationDuration: "1.4s" }}
+          style={{ animationDelay: "0.18s", animationDuration: "1.26s" }}
         >
           <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
             <path
@@ -1845,7 +1845,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
         <div className="flex-1 flex flex-col justify-center">
           <div
             className="text-[11px] tracking-[0.4em] uppercase text-white/35 mb-8 fade-up"
-            style={{ animationDelay: "0.4s", animationDuration: "1.4s" }}
+            style={{ animationDelay: "0.36s", animationDuration: "1.26s" }}
           >
             Chapter {String(level.id).padStart(2, "0")}
           </div>
@@ -1853,8 +1853,8 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           <h1
             className="font-display italic text-white/95 leading-none mb-12 fade-up"
             style={{
-              animationDelay: "1.2s",
-              animationDuration: "1.8s",
+              animationDelay: "1.08s",
+              animationDuration: "1.62s",
               fontSize: "clamp(3.4rem, 14vw, 5.2rem)",
             }}
           >
@@ -1864,8 +1864,8 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           <p
             className="font-display italic text-white/70 leading-relaxed max-w-sm fade-up"
             style={{
-              animationDelay: "2.6s",
-              animationDuration: "1.8s",
+              animationDelay: "2.34s",
+              animationDuration: "1.62s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.08rem)",
             }}
           >
@@ -1879,7 +1879,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
             onClick={onBegin}
             textColor={textStrong}
             borderColor={textBorder}
-            delay={4.5}
+            delay={4.05}
             disabled={!canBegin}
           >
             Begin
@@ -1923,7 +1923,7 @@ function ChallengeView({
       key={challengeIdx}
       style={{
         background: chromeBg(lerpOklch(challenge.a, challenge.b, 0.5)),
-        transition: "background 1.6s ease",
+        transition: "background 1.44s ease",
       }}
     >
       <div className="relative w-full max-w-md text-white select-none" style={{ minHeight: "100vh" }}>
@@ -1936,7 +1936,7 @@ function ChallengeView({
         >
           <div
             className="relative w-full overflow-hidden"
-            style={{ background: oklchStr(challenge.a), transition: "background 1.6s ease" }}
+            style={{ background: oklchStr(challenge.a), transition: "background 1.44s ease" }}
           >
             <div className="liquid-band" />
           </div>
@@ -1947,7 +1947,7 @@ function ChallengeView({
                 className="w-full h-full candidate-drag cursor-grab active:cursor-grabbing relative overflow-hidden"
                 style={{
                   background: oklchStr(candidateCol),
-                  transition: isDragging ? "none" : "background 0.6s ease",
+                  transition: isDragging ? "none" : "background 0.54s ease",
                 }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -1956,7 +1956,7 @@ function ChallengeView({
               >
                 <div
                   className="liquid-band"
-                  style={{ animationDuration: "18s", animationDelay: "-4s" }}
+                  style={{ animationDuration: "16.2s", animationDelay: "-3.6s" }}
                 />
                 {!hasInteracted && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -1987,7 +1987,7 @@ function ChallengeView({
                 </div>
                 <div
                   className="absolute inset-x-0 bottom-3 flex justify-around fade-up pointer-events-none"
-                  style={{ animationDelay: "1.4s" }}
+                  style={{ animationDelay: "1.26s" }}
                 >
                   <div className="text-[10px] tracking-[0.35em] uppercase" style={{ color: labelOn(candidateCol) }}>
                     Yours
@@ -2002,11 +2002,11 @@ function ChallengeView({
 
           <div
             className="relative w-full overflow-hidden"
-            style={{ background: oklchStr(challenge.b), transition: "background 1.6s ease" }}
+            style={{ background: oklchStr(challenge.b), transition: "background 1.44s ease" }}
           >
             <div
               className="liquid-band"
-              style={{ animationDuration: "16s", animationDelay: "-7s" }}
+              style={{ animationDuration: "14.4s", animationDelay: "-6.3s" }}
             />
           </div>
         </div>
@@ -2017,7 +2017,7 @@ function ChallengeView({
           style={{
             background: "transparent",
             transform: showBar ? "translateY(0)" : "translateY(100%)",
-            transition: "transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
+            transition: "transform 0.81s cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
           {phase === "play" ? (
@@ -2032,7 +2032,7 @@ function ChallengeView({
               Lock in
             </button>
           ) : (
-            <div className="w-full fade-up" style={{ animationDelay: "1.1s" }}>
+            <div className="w-full fade-up" style={{ animationDelay: "0.99s" }}>
               <div className="flex items-baseline justify-between mb-4">
                 <div className="flex items-baseline gap-2">
                   <span
@@ -2077,7 +2077,7 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
   const [canContinue, setCanContinue] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setCanContinue(true), 6500);
+    const t = setTimeout(() => setCanContinue(true), 5850);
     return () => clearTimeout(t);
   }, []);
 
@@ -2090,7 +2090,7 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
         <div className="flex-1 flex flex-col justify-center">
           <div
             className="fade-up mb-6"
-            style={{ animationDelay: "0.4s", animationDuration: "1.4s" }}
+            style={{ animationDelay: "0.36s", animationDuration: "1.26s" }}
           >
             <span
               className="text-[11px] tracking-[0.4em] uppercase"
@@ -2104,8 +2104,8 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
             className="font-display italic leading-[0.95] mb-12 fade-up"
             style={{
               color: labelOn(color, true),
-              animationDelay: "1.4s",
-              animationDuration: "1.8s",
+              animationDelay: "1.26s",
+              animationDuration: "1.62s",
               fontSize: "clamp(3rem, 12vw, 4.6rem)",
             }}
           >
@@ -2117,8 +2117,8 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
             style={{
               color: labelOn(color, true),
               opacity: 0.86,
-              animationDelay: "3.2s",
-              animationDuration: "1.8s",
+              animationDelay: "2.88s",
+              animationDuration: "1.62s",
               fontSize: "clamp(0.94rem, 4vw, 1.13rem)",
             }}
           >
@@ -2132,7 +2132,7 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
             onClick={onContinue}
             textColor={labelOn(color, true)}
             borderColor={labelOn(color)}
-            delay={6.5}
+            delay={5.85}
             disabled={!canContinue}
           >
             {isLast ? "Rest" : "Continue"}
@@ -2171,7 +2171,7 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
         <div className="flex-1 flex flex-col justify-center items-start">
           <div
             className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
-            style={{ color: restSoft, animationDelay: "0.4s" }}
+            style={{ color: restSoft, animationDelay: "0.36s" }}
           >
             {level.name} · complete
           </div>
@@ -2180,8 +2180,8 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
             className="font-display italic mb-12 fade-up leading-none"
             style={{
               color: restStrong,
-              animationDelay: "1.2s",
-              animationDuration: "1.8s",
+              animationDelay: "1.08s",
+              animationDuration: "1.62s",
               fontSize: "clamp(4.2rem, 16vw, 6rem)",
             }}
           >
@@ -2190,7 +2190,7 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
 
           <div
             className="flex gap-2 mb-12 fade-up"
-            style={{ animationDelay: "2.4s", animationDuration: "1.8s" }}
+            style={{ animationDelay: "2.16s", animationDuration: "1.62s" }}
           >
             {results.map((r, i) => (
               <div
@@ -2210,7 +2210,7 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
             className="font-display italic fade-up"
             style={{
               color: restSoft,
-              animationDelay: "3.4s",
+              animationDelay: "3.06s",
               fontSize: "1.18rem",
             }}
           >
@@ -2222,8 +2222,8 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
             className="font-display italic fade-up leading-relaxed mt-8 max-w-sm"
             style={{
               color: restSoft,
-              animationDelay: "4.6s",
-              animationDuration: "1.8s",
+              animationDelay: "4.14s",
+              animationDuration: "1.62s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
             }}
           >
@@ -2237,7 +2237,7 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
             onClick={onHome}
             textColor={restStrong}
             borderColor={restStrong}
-            delay={6.0}
+            delay={5.4}
           >
             Home
           </ActionButton>
