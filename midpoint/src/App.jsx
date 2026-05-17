@@ -1826,22 +1826,6 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
       style={{ background: bg }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
-        <button
-          onClick={handleExit}
-          aria-label="Exit chapter"
-          className="self-start -ml-1 mb-6 w-10 h-10 flex items-center justify-center fade-up"
-          style={{ animationDelay: "0.18s", animationDuration: "1.26s" }}
-        >
-          <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
-            <path
-              d="M7 1L1 7l6 6M1 7h20"
-              stroke={textBorder}
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
         <div className="flex-1 flex flex-col justify-center">
           <div
             className="text-[11px] tracking-[0.4em] uppercase text-white/35 mb-8 fade-up"
@@ -1873,17 +1857,39 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
           </p>
         </div>
 
-        <div className="pt-12">
-          <ActionButton
-            audio={audio}
-            onClick={onBegin}
-            textColor={textStrong}
-            borderColor={textBorder}
-            delay={4.05}
-            disabled={!canBegin}
+        <div className="pt-12 flex items-stretch gap-3">
+          <button
+            onClick={handleExit}
+            aria-label="Exit chapter"
+            className="h-14 w-14 flex items-center justify-center border transition-all duration-500 active:scale-[0.98] fade-up flex-shrink-0"
+            style={{
+              borderColor: textBorder,
+              animationDelay: "0.18s",
+              animationDuration: "1.26s",
+            }}
           >
-            Begin
-          </ActionButton>
+            <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+              <path
+                d="M7 1L1 7l6 6M1 7h20"
+                stroke={textBorder}
+                strokeWidth="1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <div className="flex-1">
+            <ActionButton
+              audio={audio}
+              onClick={onBegin}
+              textColor={textStrong}
+              borderColor={textBorder}
+              delay={4.05}
+              disabled={!canBegin}
+            >
+              Begin
+            </ActionButton>
+          </div>
         </div>
       </div>
     </div>
