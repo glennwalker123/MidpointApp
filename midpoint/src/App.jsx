@@ -851,6 +851,13 @@ function rate(score) {
 
 function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
   const [expanded, setExpanded] = useState(false);
+  // Snapshot the viewport at mount so the end-state has explicit pixel values
+  // that CSS can interpolate from the start rect. Avoids `auto` / `100vw`
+  // edge cases (mobile address-bar height, etc.).
+  const [viewport] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 0,
+    h: typeof window !== "undefined" ? window.innerHeight : 0,
+  }));
 
   useEffect(() => {
     // Two RAFs so the browser paints the initial rect before transitioning.
@@ -858,7 +865,7 @@ function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => setExpanded(true));
     });
-    const t = setTimeout(onDone, duration);
+    const t = setTimeout(onDone, duration + 50);
     return () => {
       cancelAnimationFrame(raf1);
       if (raf2) cancelAnimationFrame(raf2);
@@ -867,7 +874,7 @@ function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
   }, [duration, onDone]);
 
   const sizing = expanded
-    ? { left: 0, top: 0, right: 0, bottom: 0, width: "auto", height: "auto" }
+    ? { left: 0, top: 0, width: viewport.w, height: viewport.h }
     : {
         left: fromRect.x,
         top: fromRect.y,
@@ -880,7 +887,9 @@ function ExpandingTile({ color, fromRect, onDone, duration = 900 }) {
       style={{
         position: "fixed",
         background: color,
-        transition: `all ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+        transitionProperty: "left, top, width, height",
+        transitionDuration: `${duration}ms`,
+        transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         zIndex: 100,
         pointerEvents: "none",
         ...sizing,
@@ -1775,6 +1784,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
           level={level}
           audio={audio}
           onBegin={() => setPhase("play")}
+          onExit={() => onExit(false)}
         />
       )}
 
@@ -1848,7 +1858,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
 // INTRO SCREEN — appears once at the start of each level
 // ============================================================================
 
-function IntroScreen({ level, audio, onBegin }) {
+function IntroScreen({ level, audio, onBegin, onExit }) {
   const [canBegin, setCanBegin] = useState(false);
   const bg = roundColor(level);
   const bgStr = oklchStr(bg);
@@ -1860,12 +1870,33 @@ function IntroScreen({ level, audio, onBegin }) {
     return () => clearTimeout(t);
   }, []);
 
+  function handleExit() {
+    if (audio) audio.buttonTap();
+    onExit();
+  }
+
   return (
     <div
       className="min-h-screen flex justify-center"
       style={{ background: bgStr }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
+        <button
+          onClick={handleExit}
+          aria-label="Exit chapter"
+          className="self-start -ml-1 mb-6 w-10 h-10 flex items-center justify-center fade-up"
+          style={{ animationDelay: "0.2s", animationDuration: "1.2s" }}
+        >
+          <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+            <path
+              d="M7 1L1 7l6 6M1 7h20"
+              stroke={textSoft}
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
         <div className="flex-1 flex flex-col justify-center">
           <div
             className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
