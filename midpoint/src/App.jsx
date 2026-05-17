@@ -954,21 +954,22 @@ export default function App() {
         .drift { animation: drift 6s ease-in-out infinite; }
 
         /* Liquid shimmer — slow drifting highlight inside a colour band.
-           Soft, never obscures the boundary the player needs to see. */
+           Visible but still slow enough to read as breathing, not motion. */
         @keyframes liquidShift {
-          0%   { transform: translate(-4%, -3%) scale(1.02); }
-          50%  { transform: translate(3%, 4%) scale(1.08); }
-          100% { transform: translate(-2%, 1%) scale(1.00); }
+          0%   { transform: translate(-9%, -6%) scale(1.05); }
+          50%  { transform: translate(7%,  8%) scale(1.18); }
+          100% { transform: translate(-3%, 2%) scale(1.02); }
         }
         .liquid-band {
           position: absolute;
-          inset: 0;
+          inset: -10%;
           pointer-events: none;
           background:
-            radial-gradient(ellipse 85% 55% at 35% 30%, rgba(255,255,255,0.07), transparent 55%),
-            radial-gradient(ellipse 75% 50% at 70% 75%, rgba(0,0,0,0.06), transparent 55%);
-          mix-blend-mode: soft-light;
-          animation: liquidShift 14s ease-in-out infinite alternate;
+            radial-gradient(ellipse 70% 45% at 28% 22%, rgba(255,255,255,0.22), transparent 60%),
+            radial-gradient(ellipse 65% 42% at 78% 82%, rgba(0,0,0,0.18), transparent 60%),
+            radial-gradient(ellipse 55% 38% at 55% 55%, rgba(255,255,255,0.12), transparent 65%);
+          mix-blend-mode: overlay;
+          animation: liquidShift 11s ease-in-out infinite alternate;
         }
 
         /* Breath cycle: 4s inhale → 4s hold → 4s exhale */
