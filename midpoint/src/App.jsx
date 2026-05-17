@@ -1275,8 +1275,8 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
         <div className="mb-12">
           <div className="fade-up">
             <div
-              className="font-display italic text-6xl leading-none"
-              style={{ color: CREAM_TEXT.strong }}
+              className="font-display italic leading-none"
+              style={{ color: CREAM_TEXT.strong, fontSize: "22px" }}
             >
               midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
             </div>
