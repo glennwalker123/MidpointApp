@@ -2103,16 +2103,23 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
     () => CALMING_MESSAGES[Math.floor(Math.random() * CALMING_MESSAGES.length)]
   );
 
+  // Soft pastel wash derived from the round's hue — calmer than pure cream,
+  // and carries the round's identity into its resting space.
+  const round = roundColor(level);
+  const restBg = { l: 0.86, c: 0.04, h: round.h };
+  const restStrong = labelOn(restBg, true);
+  const restSoft = labelOn(restBg);
+
   return (
     <div
       className="min-h-screen flex justify-center screen-in"
-      style={{ background: oklchStr(HOME_BG) }}
+      style={{ background: oklchStr(restBg) }}
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center items-start">
           <div
             className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
-            style={{ color: CREAM_TEXT.soft, animationDelay: "0.4s" }}
+            style={{ color: restSoft, animationDelay: "0.4s" }}
           >
             {level.name} · complete
           </div>
@@ -2120,7 +2127,7 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
           <h1
             className="font-display italic mb-12 fade-up leading-none"
             style={{
-              color: CREAM_TEXT.strong,
+              color: restStrong,
               animationDelay: "1.2s",
               animationDuration: "1.8s",
               fontSize: "clamp(4.2rem, 16vw, 6rem)",
@@ -2150,19 +2157,19 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
           <div
             className="font-display italic fade-up"
             style={{
-              color: CREAM_TEXT.body,
+              color: restSoft,
               animationDelay: "3.4s",
               fontSize: "1.18rem",
             }}
           >
             Your eye averaged{" "}
-            <span style={{ color: CREAM_TEXT.strong }}>{avg}%</span>.
+            <span style={{ color: restStrong }}>{avg}%</span>.
           </div>
 
           <div
             className="font-display italic fade-up leading-relaxed mt-8 max-w-sm"
             style={{
-              color: CREAM_TEXT.body,
+              color: restSoft,
               animationDelay: "4.6s",
               animationDuration: "1.8s",
               fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
@@ -2176,8 +2183,8 @@ function LevelComplete({ level, results, bgColor, audio, onHome }) {
           <ActionButton
             audio={audio}
             onClick={onHome}
-            textColor={CREAM_TEXT.strong}
-            borderColor={CREAM_TEXT.borderStrong}
+            textColor={restStrong}
+            borderColor={restStrong}
             delay={6.0}
           >
             Home
