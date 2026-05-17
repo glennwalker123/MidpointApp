@@ -31,7 +31,8 @@ This is the part that matters most. Hold this voice and these constraints in eve
   - Colour helpers — `lerpOklch`, `oklchStr`, `labelOn` (returns text colour that contrasts with a given OKLCH background), `chromeBg` (dark tinted variant), `roundColor` (average midpoint of a round)
   - `LEVELS` — array of 12 rounds, each with 5 challenges. Each challenge has `a`, `b`, `midpointName`, `fact`.
   - `CALMING_MESSAGES` — variants shown on the complete screen
-  - Components: `App`, `Home`, `About`, `Level`, `IntroScreen`, `ChallengeView`, `Reflection`, `LevelComplete`, `MuteToggle`, `ActionButton`
+  - Components: `App`, `Onboarding`, `Home`, `About`, `Settings`, `Level`, `IntroScreen`, `ChallengeView`, `Reflection`, `LevelComplete`, `MuteToggle`, `ActionButton`
+  - Onboarding: 3–4 slides shown on first visit. Skippable. Tracked via `localStorage["midpoint:onboarded"]`. Only persistent state in the app — everything else is in-memory.
 - **All colour values are OKLCH** for perceptual uniformity. The midpoint is always at `t = 0.5` along the gradient between `a` and `b`.
 
 ## Audio

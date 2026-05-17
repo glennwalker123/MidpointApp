@@ -751,6 +751,25 @@ const CREAM_TEXT = {
   borderStrong: "oklch(0.62 0.018 80)",
 };
 
+const ONBOARDING_SLIDES = [
+  {
+    title: "On colour.",
+    body: "Midpoint is a small game about a single act of perception. You will be shown two colours, and asked to find the middle.",
+  },
+  {
+    title: "Drag, then lock.",
+    body: "Move a band between the two colours until it sits at the perceptual midpoint. Lock in. The screen will answer with the truth.",
+  },
+  {
+    title: "Slow looking.",
+    body: "Your eye drifts with sleep, with light, with mood. Each round trains attention, not competence. There are no wrong answers — only honest ones.",
+  },
+  {
+    title: "Begin.",
+    body: "Use headphones if you have them. The sound is part of the design.",
+  },
+];
+
 const CALMING_MESSAGES = [
   "Color perception varies — with sleep, with light, with the hour. Your eye today is not your eye yesterday.",
   "Now look up. Find the farthest thing you can see. Hold it for the count of three. The eye rests when the world is far.",
@@ -825,8 +844,20 @@ function rate(score) {
 // APP
 // ============================================================================
 
+const ONBOARDED_KEY = "midpoint:onboarded";
+
+function readOnboarded() {
+  try {
+    return localStorage.getItem(ONBOARDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export default function App() {
-  const [screen, setScreen] = useState({ name: "home" });
+  const [screen, setScreen] = useState(() =>
+    readOnboarded() ? { name: "home" } : { name: "onboarding" }
+  );
   const [completed, setCompleted] = useState(new Set());
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
@@ -840,6 +871,24 @@ export default function App() {
     const next = !muted;
     setMuted(next);
     audioRef.current.setMuted(next);
+  }
+
+  function finishOnboarding() {
+    try {
+      localStorage.setItem(ONBOARDED_KEY, "1");
+    } catch {
+      // ignore — onboarding will simply re-show on next visit
+    }
+    setScreen({ name: "home" });
+  }
+
+  function onboardingReadMore() {
+    try {
+      localStorage.setItem(ONBOARDED_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setScreen({ name: "about" });
   }
 
   function enterLevel(id) {
@@ -921,6 +970,13 @@ export default function App() {
       `}</style>
 
       <div className="font-sans min-h-screen">
+        {screen.name === "onboarding" && (
+          <Onboarding
+            onDone={finishOnboarding}
+            onOpenAbout={onboardingReadMore}
+            audio={audioRef.current}
+          />
+        )}
         {screen.name === "home" && (
           <Home
             onSelect={enterLevel}
@@ -1039,6 +1095,167 @@ function ActionButton({
 }
 
 // ============================================================================
+// ONBOARDING — 3–4 calm slides shown on first visit
+// ============================================================================
+
+function Onboarding({ onDone, onOpenAbout, audio }) {
+  const [i, setI] = useState(0);
+  const slide = ONBOARDING_SLIDES[i];
+  const isFirst = i === 0;
+  const isLast = i === ONBOARDING_SLIDES.length - 1;
+
+  function next() {
+    if (audio) audio.buttonTap();
+    if (isLast) onDone();
+    else setI(i + 1);
+  }
+  function prev() {
+    if (isFirst) return;
+    if (audio) audio.buttonTap();
+    setI(i - 1);
+  }
+  function skip() {
+    if (audio) audio.buttonTap();
+    onDone();
+  }
+  function readMore() {
+    if (audio) audio.buttonTap();
+    onOpenAbout();
+  }
+
+  const arrowStroke = CREAM_TEXT.strong;
+
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: oklchStr(HOME_BG) }}
+    >
+      <div className="w-full max-w-md px-8 py-14 flex flex-col">
+        <div className="flex justify-between items-start">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase"
+            style={{ color: CREAM_TEXT.soft }}
+          >
+            {`${String(i + 1).padStart(2, "0")} / ${String(
+              ONBOARDING_SLIDES.length
+            ).padStart(2, "0")}`}
+          </div>
+          <button
+            onClick={skip}
+            className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+            style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+          >
+            Skip
+          </button>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center">
+          <h1
+            key={`title-${i}`}
+            className="font-display italic leading-[0.95] mb-8 fade-up"
+            style={{
+              color: CREAM_TEXT.strong,
+              fontSize: "clamp(2.8rem, 11vw, 4rem)",
+              animationDuration: "1.2s",
+            }}
+          >
+            {slide.title}
+          </h1>
+          <p
+            key={`body-${i}`}
+            className="font-display leading-relaxed mb-8 fade-up max-w-sm"
+            style={{
+              color: CREAM_TEXT.body,
+              fontSize: "clamp(1rem, 4vw, 1.12rem)",
+              animationDelay: "0.3s",
+              animationDuration: "1.4s",
+            }}
+          >
+            {slide.body}
+          </p>
+          {!isLast && (
+            <button
+              key={`more-${i}`}
+              onClick={readMore}
+              className="self-start text-[11px] tracking-[0.35em] uppercase pb-1 border-b fade-up transition-colors duration-500"
+              style={{
+                color: CREAM_TEXT.soft,
+                borderColor: CREAM_TEXT.border,
+                animationDelay: "0.6s",
+                animationDuration: "1.4s",
+              }}
+            >
+              Read more
+            </button>
+          )}
+        </div>
+
+        <div className="pt-8">
+          {isLast ? (
+            <ActionButton
+              audio={audio}
+              onClick={next}
+              textColor={CREAM_TEXT.strong}
+              borderColor={CREAM_TEXT.borderStrong}
+              delay={0.4}
+            >
+              Play now
+            </ActionButton>
+          ) : (
+            <div className="flex justify-between items-center">
+              <button
+                onClick={prev}
+                disabled={isFirst}
+                aria-label="Previous"
+                className="w-12 h-12 flex items-center justify-center"
+                style={{ opacity: isFirst ? 0.2 : 1 }}
+              >
+                <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+                  <path
+                    d="M7 1L1 7l6 6M1 7h20"
+                    stroke={arrowStroke}
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <div className="flex gap-2">
+                {ONBOARDING_SLIDES.map((_, j) => (
+                  <span
+                    key={j}
+                    className="block w-1.5 h-1.5 rounded-full transition-colors duration-500"
+                    style={{
+                      background:
+                        j === i ? CREAM_TEXT.strong : CREAM_TEXT.border,
+                    }}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={next}
+                aria-label="Next"
+                className="w-12 h-12 flex items-center justify-center"
+              >
+                <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+                  <path
+                    d="M15 1l6 6-6 6M21 7H1"
+                    stroke={arrowStroke}
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // HOME
 // ============================================================================
 
@@ -1069,51 +1286,78 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 flex-1 content-start">
+        <div className="flex flex-col gap-3 flex-1 content-start">
           {LEVELS.map((level, i) => {
             const isDone = completed.has(level.id);
             const isLocked = i > 0 && !completed.has(LEVELS[i - 1].id);
             const tileCol = roundColor(level);
             const tileText = labelOn(tileCol, true);
             const tileTextSoft = labelOn(tileCol);
+            const lockedBg = "oklch(0.86 0.008 80)";
             return (
               <button
                 key={level.id}
                 disabled={isLocked}
-                aria-label={isLocked ? "Locked" : level.name}
+                aria-label={isLocked ? `Round ${level.id}, locked` : level.name}
                 onClick={() => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
                   onSelect(level.id);
                 }}
-                className={`aspect-square relative fade-up transition-transform ${
-                  isLocked ? "cursor-not-allowed" : "active:scale-[0.97]"
+                className={`relative w-full fade-up transition-transform ${
+                  isLocked ? "cursor-not-allowed" : "active:scale-[0.99]"
                 }`}
                 style={{
-                  background: oklchStr(tileCol),
-                  animationDelay: `${0.15 + i * 0.06}s`,
-                  opacity: isLocked ? 0.18 : 1,
+                  height: "108px",
+                  background: isLocked ? lockedBg : oklchStr(tileCol),
+                  animationDelay: `${0.15 + i * 0.05}s`,
                 }}
               >
                 <span
-                  className="absolute top-3 left-3 text-[9px] tracking-[0.3em] uppercase"
-                  style={{ color: tileTextSoft }}
+                  className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
+                  style={{ color: isLocked ? CREAM_TEXT.hint : tileTextSoft }}
                 >
                   {String(level.id).padStart(2, "0")}
                 </span>
-                {isDone && (
+                {isDone && !isLocked && (
                   <span
-                    className="absolute top-3 right-3 block w-1.5 h-1.5 rounded-full"
+                    className="absolute top-4 right-5 block w-1.5 h-1.5 rounded-full"
                     style={{ background: tileText }}
                     aria-label="completed"
                   />
                 )}
                 {!isLocked && (
                   <span
-                    className="absolute bottom-3 left-3 right-3 text-left font-display italic leading-none"
-                    style={{ color: tileText, fontSize: "20px" }}
+                    className="absolute bottom-4 left-5 right-5 text-left font-display italic leading-none"
+                    style={{ color: tileText, fontSize: "28px" }}
                   >
                     {level.name}
+                  </span>
+                )}
+                {isLocked && (
+                  <span
+                    className="absolute bottom-4 right-5"
+                    aria-hidden="true"
+                  >
+                    <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
+                      <rect
+                        x="2"
+                        y="8"
+                        width="10"
+                        height="8"
+                        rx="0.5"
+                        stroke={CREAM_TEXT.soft}
+                        strokeWidth="1"
+                        fill="none"
+                      />
+                      <path
+                        d="M4 8V5a3 3 0 0 1 6 0v3"
+                        stroke={CREAM_TEXT.soft}
+                        strokeWidth="1"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
+                    </svg>
                   </span>
                 )}
               </button>
