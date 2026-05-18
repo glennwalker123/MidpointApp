@@ -2066,11 +2066,11 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   const bgColor = oklchStr(level.bg);
 
   // Hidden per-challenge offset: the visual position where the perceptual
-  // midpoint actually lives. Drifts randomly within [0.35, 0.65] each time
-  // the challenge changes, so the player can't aim for the screen centre —
-  // they must find the midpoint by colour.
+  // midpoint actually lives. Drifts randomly within [0.43, 0.57] — close
+  // enough to the centre to feel fair, far enough off to stop the player
+  // from aiming at a fixed screen position.
   const targetPos = useMemo(
-    () => 0.35 + Math.random() * 0.30,
+    () => 0.43 + Math.random() * 0.14,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [challengeIdx, challenge]
   );
