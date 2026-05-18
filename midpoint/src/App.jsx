@@ -2065,16 +2065,36 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   const total = level.challenges.length;
   const bgColor = oklchStr(level.bg);
 
-  const truth = 0.5;
-  const distance = Math.abs(position - truth);
+  // Hidden per-challenge offset: the visual position where the perceptual
+  // midpoint actually lives. Drifts randomly within [0.35, 0.65] each time
+  // the challenge changes, so the player can't aim for the screen centre —
+  // they must find the midpoint by colour.
+  const targetPos = useMemo(
+    () => 0.35 + Math.random() * 0.30,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [challengeIdx, challenge]
+  );
+
+  // Piecewise-linear remap: visual position → color-mix position. Always
+  // monotonic and continuous; visualPos = targetPos gives colorPos = 0.5.
+  function remapPos(p) {
+    if (p <= targetPos) return (p / targetPos) * 0.5;
+    return 0.5 + ((p - targetPos) / (1 - targetPos)) * 0.5;
+  }
+
+  const colorPos = remapPos(position);
+
+  // Score by color-space error (what the player actually sees) rather than
+  // raw drag distance. distance 0.5 → score 0; distance 0 → score 100.
+  const distance = Math.abs(colorPos - 0.5);
   const score = Math.round(Math.max(0, 100 - distance * 200));
 
   const candidateCol = useMemo(
-    () => lerpOklch(challenge.a, challenge.b, position),
-    [challenge, position]
+    () => lerpOklch(challenge.a, challenge.b, colorPos),
+    [challenge, colorPos]
   );
   const truthCol = useMemo(
-    () => lerpOklch(challenge.a, challenge.b, truth),
+    () => lerpOklch(challenge.a, challenge.b, 0.5),
     [challenge]
   );
 
