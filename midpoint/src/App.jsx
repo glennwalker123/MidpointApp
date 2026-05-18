@@ -2096,10 +2096,11 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
     let newPos = drag.current.startPos + dx / 320;
     newPos = Math.max(0, Math.min(1, newPos));
     setPosition(newPos);
-    if (newPos === 0 || newPos === 1) {
-      drag.current.startX = e.clientX;
-      drag.current.startPos = newPos;
-    }
+    // Note: no edge anchoring. If the user drags past 0 or 1, the position
+    // visually clamps but the finger's overshoot is preserved in dx — they
+    // must drag back the same overshoot before the candidate moves away
+    // from the edge. This stops the "drag to edge → known distance back =
+    // known position" exploit.
   }
 
   function onPointerUp(e) {
