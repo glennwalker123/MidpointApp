@@ -445,12 +445,32 @@ class AudioEngine {
 }
 
 // ============================================================================
-// DATA — 12 themed chapters, ordered chronologically by colour history
+// DATA — Origin prologue + 12 themed chapters, chronologically ordered
 // ============================================================================
 
 const LEVELS = [
   {
     id: 1,
+    name: "Origin",
+    description: "How colour entered language.",
+    tutorialHint: true,
+    intro: "In 1969 the linguists Brent Berlin and Paul Kay analysed colour vocabularies in nearly a hundred languages and proposed a near-universal sequence: basic colour terms enter a language in roughly the same order, regardless of origin. Dark and light first. Then red. Then yellow or green. Then blue, often much later. Brown, purple, pink, and grey arrive last.\n\nThe pattern is older than writing. Three challenges follow, marking the most defensible points on the sequence \u2014 a grey, a red, a blue. The floor of colour vocabulary, the first hue ever named, and the colour that took the longest to enter language at all.",
+    bg: { l: 0.08, c: 0.005, h: 80 },
+    challenges: [
+      { a: { l: 0.15, c: 0.005, h: 80 }, b: { l: 0.92, c: 0.005, h: 80 },
+        midpointName: "Grey",
+        fact: "In the Dani language of Papua New Guinea, the only two basic colour terms are mili and mola \u2014 roughly 'cool-dark' and 'warm-light'. They cover the whole spectrum. Two-term systems are the documented floor of basic colour vocabulary." },
+      { a: { l: 0.40, c: 0.20, h: 25 }, b: { l: 0.65, c: 0.18, h: 15 },
+        midpointName: "Red",
+        fact: "When a language adds a third basic colour term beyond dark and light, that term is almost always for red. Berlin and Kay observed this pattern across the languages they surveyed, on every continent, in language families with no known common ancestor." },
+      { a: { l: 0.50, c: 0.15, h: 220 }, b: { l: 0.45, c: 0.17, h: 280 },
+        midpointName: "Blue",
+        fact: "Blue is typically the last of the basic colour terms to enter a language. Homer's Iliad and Odyssey never use a word for it \u2014 the sea is wine-dark, the sky bronze. The Hebrew Bible has no general term for blue, only one for a specific dye. Egyptian is an exception: a word for blue from about 3000 BCE, and the first synthetic blue pigment to match." },
+    ],
+    bridge: "Words for colour are recent. The colours of stone are not \u2014 some have been what they are for longer than our species has existed.",
+  },
+  {
+    id: 2,
     name: "Stone",
     description: "The colours of stillness. Patience hardened, pressed, and split.",
     intro: "Stone keeps its colour longer than anything. Some of what you'll find here was already this colour when the first humans walked. Some remembers the slow cooling of lava. Some is the bones of ancient seas, pressed together for a hundred million years. Patience, hardened.",
@@ -474,7 +494,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 2,
+    id: 3,
     name: "Earth",
     description: "What the ground gave us. The oldest pigments, mined and burnt and crushed.",
     intro: "Look down. The first colours we made were beneath us all along — pigments rubbed from soft stone, dust from baked hills, soil roasted dark in clay kilns. Mud was our first paintbox. It still is.",
@@ -498,7 +518,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 3,
+    id: 4,
     name: "Light",
     description: "Quiet whites. The colours that ask nothing.",
     intro: "Some colours arrive quietly. Built around a grain of sand. Scraped from calfskin until it could hold ink. Carved by oceans into shells, by time into tusks. These are the colours of long looking.",
@@ -522,7 +542,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 4,
+    id: 5,
     name: "Night",
     description: "Where light recedes. The dark we have words for.",
     intro: "When the eye gives up on light, it doesn't give up on colour. The dark has names. Every depth we've known long enough to remember has been given a word for it. Even silence has a sound. Even darkness has a hue.",
@@ -546,7 +566,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 5,
+    id: 6,
     name: "Bloom",
     description: "What flowers, fruits, and roots gave us. The dyes of the soft and growing world.",
     intro: "Every flower is a small announcement. Every fruit, a long agreement with the sun. The dyes pulled from these soft things have outlasted the empires that prized them — paid for in fields of crocuses, in vats of crushed roots, in patience.",
@@ -570,7 +590,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 6,
+    id: 7,
     name: "Beast",
     description: "What was taken from living things. The oldest reds and a few darker stories.",
     intro: "Where the flower chapter was plants, this is animals. For most of recorded history, the deepest reds came from crushed insects, the deepest purples from sea snails, the inks from squid and the blacks from charred bone. Every great colour of antiquity has a body behind it.",
@@ -594,7 +614,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 7,
+    id: 8,
     name: "Sea",
     description: "What water and salt make slowly. The patient chemistry of waves.",
     intro: "The sea taught us patience and chemistry. Salt air greens copper over decades. Stones brought across oceans grind down into the rarest blue we knew. Every colour that follows came from water, or from waiting for water to do its slow work.",
@@ -618,7 +638,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 8,
+    id: 9,
     name: "Empire",
     description: "Colours that meant power. Who was allowed to wear them.",
     intro: "For most of history, the brightest colours were reserved by law for the most powerful. Some emperors executed people for wearing the wrong shade. Some colours took whole industries to produce, and only the richest could afford the result. What follows is the colour of permission.",
@@ -642,7 +662,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 9,
+    id: 10,
     name: "Garden",
     description: "The widest hue family. The one the eye reads least precisely.",
     intro: "Of all the colour families, green is the one the eye distinguishes least well — a quirk of perception known since the 1940s. So this chapter will feel harder than the others, and that is not your fault. It is a hundred-year-old finding of vision science. Take your time.",
@@ -666,7 +686,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 10,
+    id: 11,
     name: "Dusk",
     description: "The hour between. The colours of becoming.",
     intro: "The hour between. Light is leaving but not yet gone. The colours here are not day, not night — they are becoming. A fly held inside resin for forty million years. A dye found by an eighteen-year-old by accident. The slow blue of unfinished thoughts.",
@@ -690,7 +710,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 11,
+    id: 12,
     name: "Forbidden",
     description: "Colours that killed, poisoned, or were quietly removed from the shelves.",
     intro: "Some colours are too beautiful to be safe. What follows is the dark side of the pigment cabinet — colours that poisoned the painters who used them, the women who wore them, the children who slept in rooms painted with them. The brighter the green, the more often the arsenic.",
@@ -714,7 +734,7 @@ const LEVELS = [
     ],
   },
   {
-    id: 12,
+    id: 13,
     name: "Made",
     description: "Colours that did not exist until someone invented them.",
     intro: "For most of human history, colour came from the world. Then it came from us. What follows is a small museum of invention — colours found by accident, made in laboratories, fought over in courtrooms. The first one was discovered by an eighteen-year-old trying to cure malaria.",
@@ -923,6 +943,18 @@ export default function App() {
     setScreen({ name: "level", levelId: id });
   }
 
+  // Bridge: mark current chapter complete, then jump straight into the next
+  // chapter's IntroScreen — used by Origin's bridge screen. No return to home.
+  function bridgeToNext(currentId) {
+    audioRef.current.stopPad();
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(currentId);
+      return next;
+    });
+    setScreen({ name: "level", levelId: currentId + 1 });
+  }
+
   function exitLevel(wasCompleted, id) {
     audioRef.current.stopPad();
     if (wasCompleted) {
@@ -1044,6 +1076,8 @@ export default function App() {
             hasEverInteracted={hasEverInteracted}
             onFirstInteract={() => setHasEverInteracted(true)}
             onExit={(wasCompleted) => exitLevel(wasCompleted, screen.levelId)}
+            onBridge={() => bridgeToNext(screen.levelId)}
+            nextLevel={LEVELS.find((l) => l.id === screen.levelId + 1)}
           />
         )}
       </div>
@@ -1651,7 +1685,7 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
 // LEVEL
 // ============================================================================
 
-function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
+function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBridge, nextLevel }) {
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [phase, setPhase] = useState("intro");
   const [position, setPosition] = useState(randomStart);
@@ -1659,6 +1693,14 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
   const [hasReleased, setHasReleased] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [expansion, setExpansion] = useState(null);
+  // Per-challenge interaction tracking, used only for tutorial chapters
+  // (level.tutorialHint = true). For non-tutorial chapters the hint follows
+  // the global hasEverInteracted, which only ever flips once.
+  const [chHasInteracted, setChHasInteracted] = useState(false);
+
+  useEffect(() => {
+    setChHasInteracted(false);
+  }, [challengeIdx]);
 
   const challenge = level.challenges[challengeIdx];
   const total = level.challenges.length;
@@ -1683,6 +1725,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
   function onPointerDown(e) {
     if (phase !== "play") return;
     if (!hasEverInteracted) onFirstInteract();
+    if (!chHasInteracted) setChHasInteracted(true);
     drag.current = { active: true, startX: e.clientX, startPos: position };
     setIsDragging(true);
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
@@ -1812,7 +1855,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
           truthCol={truthCol}
           score={score}
           distance={distance}
-          hasInteracted={hasEverInteracted}
+          hasInteracted={level.tutorialHint ? chHasInteracted : hasEverInteracted}
           hasReleased={hasReleased}
           isDragging={isDragging}
           rightHalfRef={rightHalfRef}
@@ -1834,17 +1877,31 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit }) {
           audio={audio}
           onContinue={continueFromReflection}
           isLast={challengeIdx === total - 1}
+          buttonText={
+            challengeIdx === total - 1
+              ? (level.bridge ? "Onward" : "Rest")
+              : "Continue"
+          }
         />
       )}
 
       {phase === "complete" && (
-        <LevelComplete
-          level={level}
-          results={results}
-          bgColor={bgColor}
-          audio={audio}
-          onHome={() => onExit(true)}
-        />
+        level.bridge && nextLevel ? (
+          <BridgeScreen
+            level={level}
+            nextLevel={nextLevel}
+            audio={audio}
+            onContinue={onBridge}
+          />
+        ) : (
+          <LevelComplete
+            level={level}
+            results={results}
+            bgColor={bgColor}
+            audio={audio}
+            onHome={() => onExit(true)}
+          />
+        )
       )}
 
       {expansion && (
@@ -1918,8 +1975,8 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
             {level.name}.
           </h1>
 
-          <p
-            className="font-display italic leading-relaxed max-w-sm fade-up"
+          <div
+            className="font-display italic leading-relaxed max-w-sm fade-up space-y-4"
             style={{
               color: textBorder,
               animationDelay: "2.34s",
@@ -1927,8 +1984,10 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
               fontSize: "clamp(0.94rem, 3.9vw, 1.08rem)",
             }}
           >
-            {level.intro}
-          </p>
+            {level.intro.split("\n\n").map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
         </div>
 
         <div className="pt-12 flex items-stretch gap-3">
@@ -2139,10 +2198,59 @@ function ChallengeView({
 }
 
 // ============================================================================
+// BRIDGE SCREEN — replaces LevelComplete for chapters with a `bridge` field
+// (currently only Origin). Visually leads into the next chapter rather than
+// celebrating completion.
+// ============================================================================
+
+function BridgeScreen({ level, nextLevel, audio, onContinue }) {
+  const bg = chromeBg(nextLevel.bg); // already the next chapter's chrome
+  const textStrong = "rgba(255,255,255,0.95)";
+  const textBorder = "rgba(255,255,255,0.45)";
+  const paragraphs = (level.bridge || "").split("\n\n");
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: bg }}
+    >
+      <div className="w-full max-w-md flex flex-col px-8 py-14">
+        <div className="flex-1 flex flex-col justify-center">
+          <div
+            className="font-display italic leading-relaxed max-w-sm space-y-5 fade-up"
+            style={{
+              color: textStrong,
+              animationDelay: "0.54s",
+              animationDuration: "1.62s",
+              fontSize: "clamp(1rem, 4vw, 1.18rem)",
+            }}
+          >
+            {paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onContinue}
+            textColor={textStrong}
+            borderColor={textBorder}
+            delay={3.6}
+          >
+            Begin {nextLevel.name}
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // REFLECTION
 // ============================================================================
 
-function Reflection({ color, name, fact, audio, onContinue, isLast }) {
+function Reflection({ color, name, fact, audio, onContinue, isLast, buttonText }) {
   const [canContinue, setCanContinue] = useState(false);
 
   useEffect(() => {
@@ -2204,7 +2312,7 @@ function Reflection({ color, name, fact, audio, onContinue, isLast }) {
             delay={5.85}
             disabled={!canContinue}
           >
-            {isLast ? "Rest" : "Continue"}
+            {buttonText || (isLast ? "Rest" : "Continue")}
           </ActionButton>
         </div>
       </div>
