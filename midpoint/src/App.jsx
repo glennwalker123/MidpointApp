@@ -455,7 +455,7 @@ const LEVELS = [
     description: "How colour entered language.",
     prologue: true,
     tutorialHint: true,
-    intro: "Languages around the world name colours in roughly the same order. Light and dark come first \u2014 every known language has words for these. Then red. Then green or yellow. Blue comes much later, sometimes thousands of years later. Brown, pink, purple, and grey come last.\n\nThis is how humans learned to name what they saw. Three short challenges follow, in the order colour entered language: a grey, a red, and a blue.",
+    intro: "Languages around the world name colours in roughly the same order. The most basic distinctions come first; the more specific names take centuries or longer to follow. Some colours wait so long that ancient writings have no word for them at all.\n\nThis is how humans learned to name what they saw. Three short challenges follow, marking three points on the long path.",
     bg: { l: 0.08, c: 0.005, h: 80 },
     challenges: [
       { a: { l: 0.15, c: 0.005, h: 80 }, b: { l: 0.92, c: 0.005, h: 80 },
