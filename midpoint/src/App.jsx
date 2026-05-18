@@ -1027,26 +1027,37 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
-        /* Splash: three bands, wordmark settles in the cream middle, then bands withdraw */
-        @keyframes splashTopBand {
-          0%   { transform: translateY(-100%); }
-          20%  { transform: translateY(0); }
-          75%  { transform: translateY(0); }
-          100% { transform: translateY(-100%); }
+        /* Splash sequence: hold colour A → wipe in B (left→right) → hold →
+           wipe in C (right→left) → hold → letters fade in one by one →
+           wordmark shrinks to onboarding position. Paced to feel like
+           breathing rather than a brand reveal. */
+        @keyframes splashWipeRight {
+          from { clip-path: inset(0 100% 0 0); }
+          to   { clip-path: inset(0 0 0 0); }
         }
-        @keyframes splashBottomBand {
-          0%   { transform: translateY(100%); }
-          20%  { transform: translateY(0); }
-          75%  { transform: translateY(0); }
-          100% { transform: translateY(100%); }
+        @keyframes splashWipeLeft {
+          from { clip-path: inset(0 0 0 100%); }
+          to   { clip-path: inset(0 0 0 0); }
         }
-        @keyframes splashWordmark {
-          0%   { opacity: 0; transform: translateY(10px); }
-          25%  { opacity: 0; transform: translateY(10px); }
-          40%  { opacity: 1; transform: translateY(0); }
-          70%  { opacity: 1; transform: translateY(0); }
-          90%  { opacity: 0; transform: translateY(-4px); }
-          100% { opacity: 0; }
+        @keyframes splashLetter {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes splashWordmarkSettle {
+          from {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          to {
+            top: 70px;
+            left: 32px;
+            transform: translate(0, 0) scale(0.30);
+          }
+        }
+        @keyframes splashFadeOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
         }
 
         /* Colour-sweeping-over-grey for newly unlocked chapters */
@@ -1115,6 +1126,7 @@ export default function App() {
         )}
         {!splashing && screen.name === "level" && (
           <Level
+            key={screen.levelId}
             level={LEVELS.find((l) => l.id === screen.levelId)}
             audio={audioRef.current}
             hasEverInteracted={hasEverInteracted}
@@ -1212,17 +1224,30 @@ function ActionButton({
 }
 
 // ============================================================================
-// SPLASH — three bands (warm / cream / cool) settle, wordmark fades in,
-// bands withdraw to reveal whatever screen comes next.
+// SPLASH — paced, breath-aligned sequence:
+//   0.0–1.6s: hold colour A (cream — same as HOME_BG)
+//   1.6–3.2s: B wipes across left→right
+//   3.2–3.6s: hold B
+//   3.6–5.2s: C wipes across right→left
+//   5.2–5.8s: hold C
+//   5.8–8.6s: 8 letters + dot of "midpoint." fade in one by one
+//   8.6–9.4s: hold complete wordmark
+//   9.4–10.4s: wordmark shrinks/moves to onboarding wordmark position
+//              while the splash fades to transparent
+//  10.4s:     onDone — splash unmounts, onboarding/home takes over
 // ============================================================================
 
-const SPLASH_TOP = { l: 0.74, c: 0.13, h: 30 };    // soft coral
-const SPLASH_BOTTOM = { l: 0.66, c: 0.10, h: 225 }; // dusty blue
+const SPLASH_A = { l: 0.88, c: 0.028, h: 80 };   // HOME_BG — cream
+const SPLASH_B = { l: 0.78, c: 0.075, h: 25 };   // dusty rose
+const SPLASH_C = { l: 0.72, c: 0.080, h: 220 };  // dusty blue
+const SPLASH_LETTERS = ["m", "i", "d", "p", "o", "i", "n", "t"];
+const SPLASH_TOTAL_MS = 10400;
+const SPLASH_LETTER_START_S = 5.8;
+const SPLASH_LETTER_STEP_S = 0.32;
 
 function Splash({ onDone }) {
-  // Single animation per element, 2.7s total: enter (0–20%) → hold → exit (75–100%)
   useEffect(() => {
-    const t = setTimeout(onDone, 2700);
+    const t = setTimeout(onDone, SPLASH_TOTAL_MS);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -1235,37 +1260,71 @@ function Splash({ onDone }) {
       onClick={handleTap}
       className="fixed inset-0 overflow-hidden"
       style={{
-        background: oklchStr(HOME_BG),
+        background: oklchStr(SPLASH_A),
         zIndex: 200,
+        animation: "splashFadeOut 1.0s ease 9.4s forwards",
       }}
     >
+      {/* Colour B wipes in over A */}
       <div
-        className="absolute top-0 left-0 right-0"
+        className="absolute inset-0"
         style={{
-          height: "33%",
-          background: oklchStr(SPLASH_TOP),
-          animation: "splashTopBand 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+          background: oklchStr(SPLASH_B),
+          animation:
+            "splashWipeRight 1.6s cubic-bezier(0.65, 0, 0.35, 1) 1.6s both",
         }}
       />
+      {/* Colour C wipes in over B */}
       <div
-        className="absolute bottom-0 left-0 right-0"
+        className="absolute inset-0"
         style={{
-          height: "33%",
-          background: oklchStr(SPLASH_BOTTOM),
-          animation: "splashBottomBand 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+          background: oklchStr(SPLASH_C),
+          animation:
+            "splashWipeLeft 1.6s cubic-bezier(0.65, 0, 0.35, 1) 3.6s both",
         }}
       />
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div
-          className="font-display italic"
+      {/* Wordmark — letters fade in one by one, then the whole word
+          shrinks/moves to onboarding's wordmark position */}
+      <div
+        className="absolute pointer-events-none font-display italic"
+        style={{
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) scale(1)",
+          color: CREAM_TEXT.strong,
+          fontSize: "clamp(3rem, 13vw, 4.6rem)",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          animation:
+            "splashWordmarkSettle 1.0s cubic-bezier(0.22, 1, 0.36, 1) 9.4s forwards",
+        }}
+      >
+        {SPLASH_LETTERS.map((ch, i) => (
+          <span
+            key={i}
+            style={{
+              display: "inline-block",
+              opacity: 0,
+              animation: `splashLetter 0.7s cubic-bezier(0.22, 1, 0.36, 1) ${
+                SPLASH_LETTER_START_S + i * SPLASH_LETTER_STEP_S
+              }s forwards`,
+            }}
+          >
+            {ch}
+          </span>
+        ))}
+        <span
           style={{
-            color: CREAM_TEXT.strong,
-            fontSize: "clamp(2.8rem, 12vw, 4.4rem)",
-            animation: "splashWordmark 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+            display: "inline-block",
+            opacity: 0,
+            color: CREAM_TEXT.hint,
+            animation: `splashLetter 0.7s cubic-bezier(0.22, 1, 0.36, 1) ${
+              SPLASH_LETTER_START_S + SPLASH_LETTERS.length * SPLASH_LETTER_STEP_S
+            }s forwards`,
           }}
         >
-          midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
-        </div>
+          .
+        </span>
       </div>
     </div>
   );
@@ -1516,7 +1575,8 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                 style={{
                   height: "108px",
                   background: oklchStr(tileCol),
-                  animationDelay: `${0.18 + i * 0.11}s`,
+                  animationDelay: `${0.3 + i * 0.22}s`,
+                  animationDuration: "1.8s",
                 }}
               >
                 {tileNumber && (
@@ -1595,7 +1655,10 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
 
         <div
           className="pt-10 flex justify-between items-end fade-up"
-          style={{ animationDelay: `${0.18 + LEVELS.length * 0.11 + 0.3}s` }}
+          style={{
+            animationDelay: `${0.3 + LEVELS.length * 0.22 + 0.4}s`,
+            animationDuration: "1.8s",
+          }}
         >
           <button
             onClick={openAbout}
@@ -2108,12 +2171,9 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
       setPhase("play");
       setHasReleased(false);
       setExpansion(null);
-    } else if (level.prologue && onBridge) {
-      // Prologue chapters skip the Rest screen and jump straight into the
-      // next chapter — Origin → Stone.
-      setExpansion(null);
-      onBridge();
     } else {
+      // Last reflection done. For prologue chapters with a bridge, the
+      // "complete" phase shows BridgeScreen instead of LevelComplete.
       setPhase("complete");
       setExpansion(null);
     }
@@ -2202,20 +2262,29 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
           isLast={challengeIdx === total - 1}
           buttonText={
             challengeIdx === total - 1
-              ? (level.prologue && nextLevel ? `Begin ${nextLevel.name}` : "Rest")
+              ? (level.prologue && level.bridge ? "Onward" : "Rest")
               : "Continue"
           }
         />
       )}
 
       {phase === "complete" && (
-        <LevelComplete
-          level={level}
-          results={results}
-          bgColor={bgColor}
-          audio={audio}
-          onHome={() => onExit(true)}
-        />
+        level.prologue && level.bridge && nextLevel && onBridge ? (
+          <BridgeScreen
+            level={level}
+            nextLevel={nextLevel}
+            audio={audio}
+            onContinue={onBridge}
+          />
+        ) : (
+          <LevelComplete
+            level={level}
+            results={results}
+            bgColor={bgColor}
+            audio={audio}
+            onHome={() => onExit(true)}
+          />
+        )
       )}
 
       {expansion && (
@@ -2507,6 +2576,57 @@ function ChallengeView({
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// ============================================================================
+// BRIDGE SCREEN — replaces LevelComplete for chapters with a `bridge` field.
+// Currently only Origin. Visually leads into the next chapter rather than
+// celebrating completion.
+// ============================================================================
+
+function BridgeScreen({ level, nextLevel, audio, onContinue }) {
+  const bg = roundColor(nextLevel); // matches the upcoming chapter's IntroScreen
+  const bgStr = oklchStr(bg);
+  const textStrong = labelOn(bg, true);
+  const textSoft = labelOn(bg);
+  const paragraphs = (level.bridge || "").split("\n\n");
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: bgStr }}
+    >
+      <div className="w-full max-w-md flex flex-col px-8 py-14">
+        <div className="flex-1 flex flex-col justify-center">
+          <div
+            className="font-display italic leading-relaxed max-w-sm space-y-5 fade-up"
+            style={{
+              color: textStrong,
+              animationDelay: "0.54s",
+              animationDuration: "1.62s",
+              fontSize: "clamp(1rem, 4vw, 1.18rem)",
+            }}
+          >
+            {paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onContinue}
+            textColor={textStrong}
+            borderColor={textSoft}
+            delay={2.7}
+          >
+            Begin {nextLevel.name}
+          </ActionButton>
         </div>
       </div>
     </div>
