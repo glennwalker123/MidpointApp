@@ -442,6 +442,28 @@ class AudioEngine {
     osc.start(t);
     osc.stop(t + 0.6);
   }
+
+  // Swipe — slow-attack sine that swells and fades, used for slide changes
+  // and chapter unlock sweeps. Duration parameter lets the unlock variant
+  // match the 1.8s sweep animation; the onboarding variant is short.
+  swipeSound(duration = 0.7) {
+    if (!this.ensureContext()) return;
+    if (this.muted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = "sine";
+    // Gentle rise across the duration — D4 up to a softly higher D4-ish
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(294, t + duration);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.085, t + duration * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + duration + 0.05);
+  }
 }
 
 // ============================================================================
@@ -1342,13 +1364,13 @@ function Onboarding({ onDone, audio }) {
   }, [isLast, audio]);
 
   function next() {
-    if (audio) audio.buttonTap();
+    if (audio) audio.swipeSound(0.7);
     if (isLast) onDone();
     else setI(i + 1);
   }
   function prev() {
     if (isFirst) return;
-    if (audio) audio.buttonTap();
+    if (audio) audio.swipeSound(0.7);
     setI(i - 1);
   }
   function skip() {
@@ -1508,11 +1530,19 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
   }
 
   // Clear the unlocking flag after the sweep finishes (delay 0.6s + 1.8s anim + small buffer)
+  // and play a soft swelling tone alongside the sweep — same family as the
+  // onboarding swipe sound, longer to match the 1.8s sweep duration.
   useEffect(() => {
     if (unlocking == null || !onUnlockingDone) return;
-    const t = setTimeout(() => onUnlockingDone(), 2700);
-    return () => clearTimeout(t);
-  }, [unlocking, onUnlockingDone]);
+    const soundT = setTimeout(() => {
+      if (audio) audio.swipeSound(1.8);
+    }, 600); // sweep animation has a 0.6s lead-in
+    const clearT = setTimeout(() => onUnlockingDone(), 2700);
+    return () => {
+      clearTimeout(soundT);
+      clearTimeout(clearT);
+    };
+  }, [unlocking, onUnlockingDone, audio]);
 
   return (
     <div
