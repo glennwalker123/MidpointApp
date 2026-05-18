@@ -1,0 +1,19 @@
+{
+  "name": "midpoint",
+  "short_name": "midpoint",
+  "description": "A small game about finding the middle between two colours.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e3d5b9",
+  "theme_color": "#e3d5b9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

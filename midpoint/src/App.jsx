@@ -1027,18 +1027,26 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
-        /* Splash: two coloured halves slide into the middle, then fade away */
-        @keyframes splashTopIn {
-          from { transform: translateY(-100%); }
-          to   { transform: translateY(0); }
+        /* Splash: three bands, wordmark settles in the cream middle, then bands withdraw */
+        @keyframes splashTopBand {
+          0%   { transform: translateY(-100%); }
+          20%  { transform: translateY(0); }
+          75%  { transform: translateY(0); }
+          100% { transform: translateY(-100%); }
         }
-        @keyframes splashBottomIn {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
+        @keyframes splashBottomBand {
+          0%   { transform: translateY(100%); }
+          20%  { transform: translateY(0); }
+          75%  { transform: translateY(0); }
+          100% { transform: translateY(100%); }
         }
-        @keyframes splashFadeOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
+        @keyframes splashWordmark {
+          0%   { opacity: 0; transform: translateY(10px); }
+          25%  { opacity: 0; transform: translateY(10px); }
+          40%  { opacity: 1; transform: translateY(0); }
+          70%  { opacity: 1; transform: translateY(0); }
+          90%  { opacity: 0; transform: translateY(-4px); }
+          100% { opacity: 0; }
         }
 
         /* Colour-sweeping-over-grey for newly unlocked chapters */
@@ -1063,10 +1071,10 @@ export default function App() {
       `}</style>
 
       <div className="font-sans min-h-screen">
-        {screen.name === "onboarding" && (
+        {!splashing && screen.name === "onboarding" && (
           <Onboarding onDone={finishOnboarding} audio={audioRef.current} />
         )}
-        {screen.name === "home" && (
+        {!splashing && screen.name === "home" && (
           <Home
             onSelect={enterLevel}
             onOpenAbout={() => setScreen({ name: "about" })}
@@ -1077,20 +1085,27 @@ export default function App() {
             onUnlockingDone={() => setUnlocking(null)}
           />
         )}
-        {screen.name === "about" && (
+        {!splashing && screen.name === "about" && (
           <About
             onBack={() => setScreen({ name: "home" })}
             onOpenSources={() => setScreen({ name: "sources" })}
+            onOpenMaker={() => setScreen({ name: "maker" })}
             audio={audioRef.current}
           />
         )}
-        {screen.name === "sources" && (
+        {!splashing && screen.name === "sources" && (
           <Sources
             onBack={() => setScreen({ name: "about" })}
             audio={audioRef.current}
           />
         )}
-        {screen.name === "settings" && (
+        {!splashing && screen.name === "maker" && (
+          <Maker
+            onBack={() => setScreen({ name: "about" })}
+            audio={audioRef.current}
+          />
+        )}
+        {!splashing && screen.name === "settings" && (
           <Settings
             onBack={() => setScreen({ name: "home" })}
             audio={audioRef.current}
@@ -1098,7 +1113,7 @@ export default function App() {
             onToggleMute={toggleMute}
           />
         )}
-        {screen.name === "level" && (
+        {!splashing && screen.name === "level" && (
           <Level
             level={LEVELS.find((l) => l.id === screen.levelId)}
             audio={audioRef.current}
@@ -1197,18 +1212,17 @@ function ActionButton({
 }
 
 // ============================================================================
-// SPLASH — two halves meet at the middle, wordmark settles, fades to app
+// SPLASH — three bands (warm / cream / cool) settle, wordmark fades in,
+// bands withdraw to reveal whatever screen comes next.
 // ============================================================================
 
-const SPLASH_TOP = { l: 0.42, c: 0.16, h: 30 };   // deep warm — sienna-red
-const SPLASH_BOTTOM = { l: 0.32, c: 0.15, h: 240 }; // deep cool — navy
-const SPLASH_WORDMARK = "oklch(0.92 0.02 80)";
-const SPLASH_HINT = "oklch(0.72 0.05 30)";
+const SPLASH_TOP = { l: 0.74, c: 0.13, h: 30 };    // soft coral
+const SPLASH_BOTTOM = { l: 0.66, c: 0.10, h: 225 }; // dusty blue
 
 function Splash({ onDone }) {
-  // Total: halves in 0.9s, wordmark settles 0.6→1.8s, hold, fade 1.8→2.4s
+  // Single animation per element, 2.7s total: enter (0–20%) → hold → exit (75–100%)
   useEffect(() => {
-    const t = setTimeout(onDone, 2400);
+    const t = setTimeout(onDone, 2700);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -1223,38 +1237,34 @@ function Splash({ onDone }) {
       style={{
         background: oklchStr(HOME_BG),
         zIndex: 200,
-        animation: "splashFadeOut 0.6s ease 1.8s forwards",
       }}
     >
       <div
         className="absolute top-0 left-0 right-0"
         style={{
-          height: "50%",
+          height: "33%",
           background: oklchStr(SPLASH_TOP),
-          animation: "splashTopIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both",
+          animation: "splashTopBand 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
         }}
       />
       <div
         className="absolute bottom-0 left-0 right-0"
         style={{
-          height: "50%",
+          height: "33%",
           background: oklchStr(SPLASH_BOTTOM),
-          animation: "splashBottomIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both",
+          animation: "splashBottomBand 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
         }}
       />
-      <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-      >
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div
-          className="font-display italic fade-up"
+          className="font-display italic"
           style={{
-            color: SPLASH_WORDMARK,
-            fontSize: "clamp(2.6rem, 11vw, 4rem)",
-            animationDelay: "0.6s",
-            animationDuration: "1.2s",
+            color: CREAM_TEXT.strong,
+            fontSize: "clamp(2.8rem, 12vw, 4.4rem)",
+            animation: "splashWordmark 2.7s cubic-bezier(0.22, 1, 0.36, 1) both",
           }}
         >
-          midpoint<span style={{ color: SPLASH_HINT }}>.</span>
+          midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
         </div>
       </div>
     </div>
@@ -1532,10 +1542,10 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                 </span>
                 {level.prologue && !isDone && (
                   <span
-                    className="absolute bottom-5 right-5 text-[10px] tracking-[0.32em] uppercase"
-                    style={{ color: tileTextSoft }}
+                    className="absolute bottom-5 right-5 text-[10px] tracking-[0.32em] uppercase pb-1 border-b"
+                    style={{ color: tileTextSoft, borderColor: tileTextSoft }}
                   >
-                    Begin →
+                    Begin
                   </span>
                 )}
 
@@ -1617,10 +1627,14 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
 // ABOUT — a quiet page about what Two actually is
 // ============================================================================
 
-function About({ onBack, audio, onOpenSources }) {
+function About({ onBack, audio, onOpenSources, onOpenMaker }) {
   function openSources() {
     if (audio) audio.buttonTap();
     onOpenSources();
+  }
+  function openMaker() {
+    if (audio) audio.buttonTap();
+    onOpenMaker();
   }
   return (
     <div
@@ -1708,7 +1722,7 @@ function About({ onBack, audio, onOpenSources }) {
           </div>
 
           <div
-            className="pt-8 fade-up"
+            className="pt-8 flex gap-8 fade-up"
             style={{ animationDelay: "1.8s", animationDuration: "1.26s" }}
           >
             <button
@@ -1717,6 +1731,13 @@ function About({ onBack, audio, onOpenSources }) {
               style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
             >
               Sources
+            </button>
+            <button
+              onClick={openMaker}
+              className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+              style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+            >
+              The maker
             </button>
           </div>
         </div>
@@ -1819,6 +1840,84 @@ function Sources({ onBack, audio }) {
             textColor={CREAM_TEXT.strong}
             borderColor={CREAM_TEXT.borderStrong}
             delay={2.7}
+          >
+            Return
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MAKER — short page about the person behind the app
+// ============================================================================
+
+function Maker({ onBack, audio }) {
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: oklchStr(HOME_BG) }}
+    >
+      <div className="w-full max-w-md px-8 py-14 flex flex-col">
+        <div className="flex-1">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
+            style={{
+              color: CREAM_TEXT.soft,
+              animationDelay: "0.27s",
+              animationDuration: "1.08s",
+            }}
+          >
+            The maker
+          </div>
+
+          <h1
+            className="font-display italic leading-[0.95] mb-10 fade-up"
+            style={{
+              color: CREAM_TEXT.strong,
+              animationDelay: "0.72s",
+              animationDuration: "1.44s",
+              fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
+            }}
+          >
+            Glenn Walker.
+          </h1>
+
+          <div
+            className="font-display leading-relaxed space-y-5 max-w-sm fade-up"
+            style={{
+              color: CREAM_TEXT.body,
+              animationDelay: "1.26s",
+              animationDuration: "1.62s",
+              fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
+            }}
+          >
+            <p>
+              I make small, quiet things on the web. Midpoint started as a
+              question I kept asking myself when I read about colour: where
+              is the middle, exactly? It turned into a game.
+            </p>
+            <p>
+              The science of colour perception is much older than this app
+              and far more careful. The literary voice is borrowed from
+              writers I admire. Any errors of fact, framing, or feel are
+              mine.
+            </p>
+            <p>
+              If you would like to tell me what you saw, what you felt, or
+              what you would change, I would like to hear it.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onBack}
+            textColor={CREAM_TEXT.strong}
+            borderColor={CREAM_TEXT.borderStrong}
+            delay={2.34}
           >
             Return
           </ActionButton>
@@ -2126,7 +2225,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
             top: expansion.fullscreen ? "0px" : `${expansion.box.top}px`,
             left: expansion.fullscreen ? "0px" : `${expansion.box.left}px`,
             width: expansion.fullscreen ? "100vw" : `${expansion.box.width}px`,
-            height: expansion.fullscreen ? "100vh" : `${expansion.box.height}px`,
+            height: expansion.fullscreen ? "100dvh" : `${expansion.box.height}px`,
             background: oklchStr(expansion.color),
             transition: expansion.fullscreen
               ? "top 1.26s cubic-bezier(0.65, 0, 0.35, 1), left 1.26s cubic-bezier(0.65, 0, 0.35, 1), width 1.26s cubic-bezier(0.65, 0, 0.35, 1), height 1.26s cubic-bezier(0.65, 0, 0.35, 1)"
@@ -2282,12 +2381,12 @@ function ChallengeView({
         transition: "background 1.44s ease",
       }}
     >
-      <div className="relative w-full max-w-md text-white select-none" style={{ minHeight: "100vh" }}>
+      <div className="relative w-full max-w-md text-white select-none" style={{ minHeight: "100dvh" }}>
         <div
           className="grid w-full"
           style={{
             gridTemplateRows: "1fr 1fr 1fr",
-            height: "100vh",
+            height: "100dvh",
           }}
         >
           <div
