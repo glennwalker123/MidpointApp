@@ -1131,7 +1131,12 @@ export default function App() {
         )}
       </div>
 
-      {splashing && <Splash onDone={() => setSplashing(false)} />}
+      {splashing && (
+        <Splash
+          audio={audioRef.current}
+          onDone={() => setSplashing(false)}
+        />
+      )}
     </>
   );
 }
@@ -1235,13 +1240,19 @@ const SPLASH_LETTER_START_S = 0.4;
 const SPLASH_LETTER_STEP_S = 0.25;
 const SPLASH_LETTER_DUR_S = 0.6;
 
-function Splash({ onDone }) {
+function Splash({ onDone, audio }) {
   useEffect(() => {
     const t = setTimeout(onDone, SPLASH_TOTAL_MS);
     return () => clearTimeout(t);
   }, [onDone]);
 
   function handleTap() {
+    // Skipping or tapping the splash is the user's first gesture; use it
+    // to unlock the AudioContext so later sounds can play. Without this
+    // the context stays suspended until the next gesture in onboarding,
+    // and on some browsers a startAmbient() call before any unlock can
+    // leave the context silent.
+    if (audio) audio.ensureContext();
     onDone();
   }
 
