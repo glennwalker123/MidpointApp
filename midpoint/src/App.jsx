@@ -915,6 +915,7 @@ export default function App() {
   const [muted, setMuted] = useState(false);
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
   const [unlocking, setUnlocking] = useState(null);
+  const [splashing, setSplashing] = useState(true);
   const audioRef = useRef(null);
 
   if (!audioRef.current) {
@@ -1026,6 +1027,20 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
+        /* Splash: two coloured halves slide into the middle, then fade away */
+        @keyframes splashTopIn {
+          from { transform: translateY(-100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes splashBottomIn {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes splashFadeOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+
         /* Colour-sweeping-over-grey for newly unlocked chapters */
         @keyframes unlockSweep {
           from { clip-path: inset(0 0 0 0%); }
@@ -1095,6 +1110,8 @@ export default function App() {
           />
         )}
       </div>
+
+      {splashing && <Splash onDone={() => setSplashing(false)} />}
     </>
   );
 }
@@ -1176,6 +1193,71 @@ function ActionButton({
     >
       {children}
     </button>
+  );
+}
+
+// ============================================================================
+// SPLASH — two halves meet at the middle, wordmark settles, fades to app
+// ============================================================================
+
+const SPLASH_TOP = { l: 0.42, c: 0.16, h: 30 };   // deep warm — sienna-red
+const SPLASH_BOTTOM = { l: 0.32, c: 0.15, h: 240 }; // deep cool — navy
+const SPLASH_WORDMARK = "oklch(0.92 0.02 80)";
+const SPLASH_HINT = "oklch(0.72 0.05 30)";
+
+function Splash({ onDone }) {
+  // Total: halves in 0.9s, wordmark settles 0.6→1.8s, hold, fade 1.8→2.4s
+  useEffect(() => {
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  function handleTap() {
+    onDone();
+  }
+
+  return (
+    <div
+      onClick={handleTap}
+      className="fixed inset-0 overflow-hidden"
+      style={{
+        background: oklchStr(HOME_BG),
+        zIndex: 200,
+        animation: "splashFadeOut 0.6s ease 1.8s forwards",
+      }}
+    >
+      <div
+        className="absolute top-0 left-0 right-0"
+        style={{
+          height: "50%",
+          background: oklchStr(SPLASH_TOP),
+          animation: "splashTopIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both",
+        }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0"
+        style={{
+          height: "50%",
+          background: oklchStr(SPLASH_BOTTOM),
+          animation: "splashBottomIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both",
+        }}
+      />
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+      >
+        <div
+          className="font-display italic fade-up"
+          style={{
+            color: SPLASH_WORDMARK,
+            fontSize: "clamp(2.6rem, 11vw, 4rem)",
+            animationDelay: "0.6s",
+            animationDuration: "1.2s",
+          }}
+        >
+          midpoint<span style={{ color: SPLASH_HINT }}>.</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1448,6 +1530,14 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                 >
                   {level.name}
                 </span>
+                {level.prologue && !isDone && (
+                  <span
+                    className="absolute bottom-5 right-5 text-[10px] tracking-[0.32em] uppercase"
+                    style={{ color: tileTextSoft }}
+                  >
+                    Begin →
+                  </span>
+                )}
 
                 {(isLocked || isUnlocking) && (
                   <div
