@@ -1027,21 +1027,11 @@ export default function App() {
         }
         .drift { animation: drift 5.4s ease-in-out infinite; }
 
-        /* Splash sequence:
-             0.0–0.3s   hold cream
-             0.3–1.1s   B sweeps across viewport (ease-out)
-             1.4–2.2s   C sweeps across viewport (ease-out)
-             2.5s+      letters fade in on cream
-             5.4–6.4s   wordmark shrinks to onboarding wordmark position;
-                        splash fades out */
-        @keyframes splashSweepRight {
-          from { transform: translateX(-100%); }
-          to   { transform: translateX(100%); }
-        }
-        @keyframes splashSweepLeft {
-          from { transform: translateX(100%); }
-          to   { transform: translateX(-100%); }
-        }
+        /* Splash sequence (cream throughout):
+             0.0–0.4s   hold
+             0.4–2.6s   "midpoint" letters fade in one-by-one
+             3.4–4.4s   wordmark shrinks + slides to onboarding wordmark
+                        position; splash bg fades out */
         @keyframes splashLetter {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -1227,23 +1217,21 @@ function ActionButton({
 }
 
 // ============================================================================
-// SPLASH — calm three-phase sequence:
-//   0.0–0.3s   hold cream (matches onboarding bg)
-//   0.3–1.1s   B sweeps across viewport, ease-out (off the right edge)
-//   1.4–2.2s   C sweeps across viewport, ease-out (off the left edge)
-//   2.5s+      letters of "midpoint" fade in one by one — on cream
-//   ~4.75s     final dot lands
-//   5.4–6.4s   wordmark shrinks + slides to where onboarding's wordmark
-//              sits; splash fades to transparent
-//   6.4s       onDone — onboarding takes over
+// SPLASH — letters of "midpoint" fade in on cream, then the wordmark
+// shrinks + slides to the onboarding wordmark position and the splash
+// fades out. No colour swipes, no chrome — just the brand arriving.
+//   0.0–0.4s   hold cream (one breath before the first letter)
+//   0.4–2.6s   8 letters fade in one by one (0.25s steps, 0.6s each)
+//   ~2.85s     final dot lands
+//   3.4–4.4s   wordmark shrinks + slides to onboarding position;
+//              splash bg fades to transparent
+//   4.4s       onDone — onboarding/home takes over
 // ============================================================================
 
 const SPLASH_A = { l: 0.88, c: 0.028, h: 80 };   // HOME_BG — cream
-const SPLASH_B = { l: 0.82, c: 0.045, h: 25 };   // muted warm peach (low chroma)
-const SPLASH_C = { l: 0.80, c: 0.045, h: 225 };  // muted dusty blue (low chroma)
 const SPLASH_LETTERS = ["m", "i", "d", "p", "o", "i", "n", "t"];
-const SPLASH_TOTAL_MS = 6400;
-const SPLASH_LETTER_START_S = 2.5;
+const SPLASH_TOTAL_MS = 4400;
+const SPLASH_LETTER_START_S = 0.4;
 const SPLASH_LETTER_STEP_S = 0.25;
 const SPLASH_LETTER_DUR_S = 0.6;
 
@@ -1257,7 +1245,6 @@ function Splash({ onDone }) {
     onDone();
   }
 
-  // Total letter spans = letters + dot (9). Final dot starts at:
   const dotStart =
     SPLASH_LETTER_START_S + SPLASH_LETTERS.length * SPLASH_LETTER_STEP_S;
 
@@ -1268,29 +1255,9 @@ function Splash({ onDone }) {
       style={{
         background: oklchStr(SPLASH_A),
         zIndex: 200,
-        animation: "splashFadeOut 0.8s ease 5.6s forwards",
+        animation: "splashFadeOut 0.8s ease 3.6s forwards",
       }}
     >
-      {/* B sweeps left → right, then off the right edge — cream visible again */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: oklchStr(SPLASH_B),
-          animation:
-            "splashSweepRight 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both",
-        }}
-      />
-      {/* C sweeps right → left, then off the left edge — cream visible again */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: oklchStr(SPLASH_C),
-          animation:
-            "splashSweepLeft 0.8s cubic-bezier(0.22, 1, 0.36, 1) 1.4s both",
-        }}
-      />
-      {/* Wordmark — letters fade in on cream, then word shrinks + slides
-          to the onboarding wordmark position (top:56px, left:32px) */}
       <div
         className="absolute pointer-events-none font-display italic"
         style={{
@@ -1303,7 +1270,7 @@ function Splash({ onDone }) {
           lineHeight: 1,
           whiteSpace: "nowrap",
           animation:
-            "splashWordmarkSettle 1.0s cubic-bezier(0.22, 1, 0.36, 1) 5.4s forwards",
+            "splashWordmarkSettle 1.0s cubic-bezier(0.22, 1, 0.36, 1) 3.4s forwards",
         }}
       >
         {SPLASH_LETTERS.map((ch, i) => (
