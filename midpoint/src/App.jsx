@@ -1146,6 +1146,13 @@ function Onboarding({ onDone, audio }) {
   const strong = labelOn(slide.bg, true);
   const soft = labelOn(slide.bg);
 
+  // The brown-noise bed fades in when the user reaches the final "Begin."
+  // slide so the room is already breathing when they tap Play now.
+  // startAmbient() is idempotent, so the later call in enterLevel is a no-op.
+  useEffect(() => {
+    if (isLast && audio) audio.startAmbient();
+  }, [isLast, audio]);
+
   function next() {
     if (audio) audio.buttonTap();
     if (isLast) onDone();
