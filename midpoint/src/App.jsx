@@ -938,6 +938,12 @@ export default function App() {
     setScreen({ name: "home" });
   }
 
+  // Every screen change starts at the top of the page — previously a deep
+  // scroll on the home tile list carried over into About / Settings.
+  useEffect(() => {
+    if (typeof window !== "undefined") window.scrollTo(0, 0);
+  }, [screen.name]);
+
   function enterLevel(id) {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
@@ -1059,6 +1065,13 @@ export default function App() {
         {screen.name === "about" && (
           <About
             onBack={() => setScreen({ name: "home" })}
+            onOpenSources={() => setScreen({ name: "sources" })}
+            audio={audioRef.current}
+          />
+        )}
+        {screen.name === "sources" && (
+          <Sources
+            onBack={() => setScreen({ name: "about" })}
             audio={audioRef.current}
           />
         )}
@@ -1514,7 +1527,11 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
 // ABOUT — a quiet page about what Two actually is
 // ============================================================================
 
-function About({ onBack, audio }) {
+function About({ onBack, audio, onOpenSources }) {
+  function openSources() {
+    if (audio) audio.buttonTap();
+    onOpenSources();
+  }
   return (
     <div
       className="min-h-screen flex justify-center screen-in"
@@ -1599,6 +1616,19 @@ function About({ onBack, audio }) {
               without judgement.
             </p>
           </div>
+
+          <div
+            className="pt-8 fade-up"
+            style={{ animationDelay: "1.8s", animationDuration: "1.26s" }}
+          >
+            <button
+              onClick={openSources}
+              className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+              style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+            >
+              Sources
+            </button>
+          </div>
         </div>
 
         <div className="pt-12">
@@ -1608,6 +1638,97 @@ function About({ onBack, audio }) {
             textColor={CREAM_TEXT.strong}
             borderColor={CREAM_TEXT.borderStrong}
             delay={2.16}
+          >
+            Return
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// SOURCES — attribution page linked from About
+// ============================================================================
+
+function Sources({ onBack, audio }) {
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: oklchStr(HOME_BG) }}
+    >
+      <div className="w-full max-w-md px-8 py-14 flex flex-col">
+        <div className="flex-1">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
+            style={{
+              color: CREAM_TEXT.soft,
+              animationDelay: "0.27s",
+              animationDuration: "1.08s",
+            }}
+          >
+            Sources
+          </div>
+
+          <h1
+            className="font-display italic leading-[0.95] mb-10 fade-up"
+            style={{
+              color: CREAM_TEXT.strong,
+              animationDelay: "0.72s",
+              animationDuration: "1.44s",
+              fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
+            }}
+          >
+            With thanks.
+          </h1>
+
+          <div
+            className="font-display leading-relaxed space-y-5 max-w-sm fade-up"
+            style={{
+              color: CREAM_TEXT.body,
+              animationDelay: "1.26s",
+              animationDuration: "1.62s",
+              fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
+            }}
+          >
+            <p>
+              Many of the colour histories in this app owe a debt to two
+              books, both still in print:
+            </p>
+            <p>
+              Kassia St Clair, <em>The Secret Lives of Colour</em> (John
+              Murray, 2016).
+              <br />
+              Victoria Finlay, <em>Color: A Natural History of the Palette</em>
+              {" "}(Random House, 2002).
+            </p>
+            <p>
+              The claim that languages name colours in a near-universal
+              order is from Brent Berlin and Paul Kay,{" "}
+              <em>Basic Color Terms: Their Universality and Evolution</em>
+              {" "}(University of California Press, 1969). The Dani two-term
+              system was documented by Eleanor Rosch, &lsquo;Universals in
+              colour naming and memory&rsquo; (1972).
+            </p>
+            <p>
+              The sound design draws on findings about resonant breathing
+              (~0.1 Hz, where heart-rate variability peaks) and binaural
+              beats in the theta range &mdash; both well-attested in the
+              human-perception literature.
+            </p>
+            <p>
+              Errors of fact, framing, or feel are mine.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onBack}
+            textColor={CREAM_TEXT.strong}
+            borderColor={CREAM_TEXT.borderStrong}
+            delay={2.7}
           >
             Return
           </ActionButton>
