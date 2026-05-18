@@ -452,12 +452,13 @@ class AudioEngine {
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = "sine";
-    // Gentle rise across the duration — D4 up to a softly higher D4-ish
+    // Gentle rise across the duration — A3 up to D4
     osc.frequency.setValueAtTime(220, t);
     osc.frequency.exponentialRampToValueAtTime(294, t + duration);
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(0.085, t + duration * 0.35);
+    // Peak 0.20 (was 0.085 — too quiet to read over the ambient bed)
+    gain.gain.linearRampToValueAtTime(0.20, t + duration * 0.35);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     osc.connect(gain);
     gain.connect(this.masterGain);
@@ -1572,12 +1573,12 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
             // The prologue (Origin) doesn't carry a chapter number; chapters
             // begin at Stone, which sits at index 1 and displays as "01".
             const tileNumber = level.prologue ? null : String(i).padStart(2, "0");
-            // Locked tiles sit a little darker than the cream bg but in the
-            // same hue family — feels like a quiet absence rather than a
-            // contrasting blue-grey.
-            const lockedBg = "oklch(0.82 0.014 80)";
-            const lockedTextSoft = "oklch(0.46 0.014 80)";
-            const lockedIconStroke = "oklch(0.55 0.014 80)";
+            // Locked tiles sit a hair darker than the cream bg, same hue,
+            // just enough to read as "quiet absence" rather than as their
+            // own colour.
+            const lockedBg = "oklch(0.85 0.022 80)";
+            const lockedTextSoft = "oklch(0.50 0.014 80)";
+            const lockedIconStroke = "oklch(0.58 0.014 80)";
             return (
               <button
                 key={level.id}
