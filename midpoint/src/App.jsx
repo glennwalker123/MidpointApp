@@ -453,21 +453,21 @@ const LEVELS = [
     id: 1,
     name: "Origin",
     description: "How colour entered language.",
+    prologue: true,
     tutorialHint: true,
-    intro: "In 1969 the linguists Brent Berlin and Paul Kay analysed colour vocabularies in nearly a hundred languages and proposed a near-universal sequence: basic colour terms enter a language in roughly the same order, regardless of origin. Dark and light first. Then red. Then yellow or green. Then blue, often much later. Brown, purple, pink, and grey arrive last.\n\nThe pattern is older than writing. Three challenges follow, marking the most defensible points on the sequence \u2014 a grey, a red, a blue. The floor of colour vocabulary, the first hue ever named, and the colour that took the longest to enter language at all.",
+    intro: "Languages around the world name colours in roughly the same order. Light and dark come first \u2014 every known language has words for these. Then red. Then green or yellow. Blue comes much later, sometimes thousands of years later. Brown, pink, purple, and grey come last.\n\nThis is how humans learned to name what they saw. Three short challenges follow, in the order colour entered language: a grey, a red, and a blue.",
     bg: { l: 0.08, c: 0.005, h: 80 },
     challenges: [
       { a: { l: 0.15, c: 0.005, h: 80 }, b: { l: 0.92, c: 0.005, h: 80 },
         midpointName: "Grey",
-        fact: "In the Dani language of Papua New Guinea, the only two basic colour terms are mili and mola \u2014 roughly 'cool-dark' and 'warm-light'. They cover the whole spectrum. Two-term systems are the documented floor of basic colour vocabulary." },
-      { a: { l: 0.40, c: 0.20, h: 25 }, b: { l: 0.65, c: 0.18, h: 15 },
+        fact: "Some languages have only two words for colour. The Dani people of Papua New Guinea use just two \u2014 one for cool, dark colours and one for warm, light colours. Every colour is one or the other. It is the smallest colour vocabulary that has been recorded." },
+      { a: { l: 0.30, c: 0.20, h: 20 }, b: { l: 0.60, c: 0.20, h: 20 },
         midpointName: "Red",
-        fact: "When a language adds a third basic colour term beyond dark and light, that term is almost always for red. Berlin and Kay observed this pattern across the languages they surveyed, on every continent, in language families with no known common ancestor." },
+        fact: "After light and dark, red is the next colour every language names. In a study of nearly a hundred languages from every continent, red was the third basic colour word in almost every one. It seems to be the first colour our eyes need a name for." },
       { a: { l: 0.50, c: 0.15, h: 220 }, b: { l: 0.45, c: 0.17, h: 280 },
         midpointName: "Blue",
-        fact: "Blue is typically the last of the basic colour terms to enter a language. Homer's Iliad and Odyssey never use a word for it \u2014 the sea is wine-dark, the sky bronze. The Hebrew Bible has no general term for blue, only one for a specific dye. Egyptian is an exception: a word for blue from about 3000 BCE, and the first synthetic blue pigment to match." },
+        fact: "Blue is usually the last colour to enter a language. Homer never used a word for it \u2014 in the Iliad and Odyssey, the sea is 'wine-dark' and the sky is 'bronze'. The Hebrew Bible has no general word for blue. Egypt was an exception, with a word for blue five thousand years ago and the first man-made blue paint." },
     ],
-    bridge: "Words for colour are recent. The colours of stone are not \u2014 some have been what they are for longer than our species has existed.",
   },
   {
     id: 2,
@@ -1385,9 +1385,9 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
             const tileCol = roundColor(level);
             const tileText = labelOn(tileCol, true);
             const tileTextSoft = labelOn(tileCol);
-            // Locked tiles use the complement of the home palette:
-            // bg is hue 80 (warm), so the lock-state hue is 260 (cool muted purple).
-            // Matches lightness range of the surrounding bg but distinctly cool.
+            // The prologue (Origin) doesn't carry a chapter number; chapters
+            // begin at Stone, which sits at index 1 and displays as "01".
+            const tileNumber = level.prologue ? null : String(i).padStart(2, "0");
             const lockedBg = "oklch(0.74 0.028 260)";
             const lockedTextSoft = "oklch(0.34 0.024 260)";
             const lockedIconStroke = "oklch(0.44 0.026 260)";
@@ -1395,7 +1395,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
               <button
                 key={level.id}
                 disabled={isLocked && !isUnlocking}
-                aria-label={isLocked ? `Chapter ${level.id}, locked` : level.name}
+                aria-label={isLocked ? `${level.name}, locked` : level.name}
                 onClick={() => {
                   if (isLocked) return;
                   if (audio) audio.buttonTap();
@@ -1410,12 +1410,14 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                   animationDelay: `${0.15 + i * 0.05}s`,
                 }}
               >
-                <span
-                  className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
-                  style={{ color: tileTextSoft }}
-                >
-                  {String(level.id).padStart(2, "0")}
-                </span>
+                {tileNumber && (
+                  <span
+                    className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
+                    style={{ color: tileTextSoft }}
+                  >
+                    {tileNumber}
+                  </span>
+                )}
                 {isDone && (
                   <span
                     className="absolute top-4 right-5 block w-1.5 h-1.5 rounded-full"
@@ -1436,12 +1438,14 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                     style={{ background: lockedBg }}
                     aria-hidden="true"
                   >
-                    <span
-                      className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
-                      style={{ color: lockedTextSoft }}
-                    >
-                      {String(level.id).padStart(2, "0")}
-                    </span>
+                    {tileNumber && (
+                      <span
+                        className="absolute top-4 left-5 text-[10px] tracking-[0.32em] uppercase"
+                        style={{ color: lockedTextSoft }}
+                      >
+                        {tileNumber}
+                      </span>
+                    )}
                     {isLocked && !isUnlocking && (
                       <span className="absolute bottom-4 right-5">
                         <svg width="14" height="18" viewBox="0 0 14 18" fill="none">
@@ -1790,6 +1794,11 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
       setPhase("play");
       setHasReleased(false);
       setExpansion(null);
+    } else if (level.prologue && onBridge) {
+      // Prologue chapters skip the Rest screen and jump straight into the
+      // next chapter — Origin → Stone.
+      setExpansion(null);
+      onBridge();
     } else {
       setPhase("complete");
       setExpansion(null);
@@ -1879,29 +1888,20 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
           isLast={challengeIdx === total - 1}
           buttonText={
             challengeIdx === total - 1
-              ? (level.bridge ? "Onward" : "Rest")
+              ? (level.prologue && nextLevel ? `Begin ${nextLevel.name}` : "Rest")
               : "Continue"
           }
         />
       )}
 
       {phase === "complete" && (
-        level.bridge && nextLevel ? (
-          <BridgeScreen
-            level={level}
-            nextLevel={nextLevel}
-            audio={audio}
-            onContinue={onBridge}
-          />
-        ) : (
-          <LevelComplete
-            level={level}
-            results={results}
-            bgColor={bgColor}
-            audio={audio}
-            onHome={() => onExit(true)}
-          />
-        )
+        <LevelComplete
+          level={level}
+          results={results}
+          bgColor={bgColor}
+          audio={audio}
+          onHome={() => onExit(true)}
+        />
       )}
 
       {expansion && (
@@ -1952,16 +1952,18 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
     >
       <div className="w-full max-w-md flex flex-col px-8 py-14">
         <div className="flex-1 flex flex-col justify-center">
-          <div
-            className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
-            style={{
-              color: textBorder,
-              animationDelay: "0.36s",
-              animationDuration: "1.26s",
-            }}
-          >
-            Chapter {String(level.id).padStart(2, "0")}
-          </div>
+          {!level.prologue && (
+            <div
+              className="text-[11px] tracking-[0.4em] uppercase mb-8 fade-up"
+              style={{
+                color: textBorder,
+                animationDelay: "0.36s",
+                animationDuration: "1.26s",
+              }}
+            >
+              Chapter {String(LEVELS.findIndex((l) => l.id === level.id)).padStart(2, "0")}
+            </div>
+          )}
 
           <h1
             className="font-display italic leading-none mb-12 fade-up"
@@ -2191,55 +2193,6 @@ function ChallengeView({
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// BRIDGE SCREEN — replaces LevelComplete for chapters with a `bridge` field
-// (currently only Origin). Visually leads into the next chapter rather than
-// celebrating completion.
-// ============================================================================
-
-function BridgeScreen({ level, nextLevel, audio, onContinue }) {
-  const bg = chromeBg(nextLevel.bg); // already the next chapter's chrome
-  const textStrong = "rgba(255,255,255,0.95)";
-  const textBorder = "rgba(255,255,255,0.45)";
-  const paragraphs = (level.bridge || "").split("\n\n");
-  return (
-    <div
-      className="min-h-screen flex justify-center screen-in"
-      style={{ background: bg }}
-    >
-      <div className="w-full max-w-md flex flex-col px-8 py-14">
-        <div className="flex-1 flex flex-col justify-center">
-          <div
-            className="font-display italic leading-relaxed max-w-sm space-y-5 fade-up"
-            style={{
-              color: textStrong,
-              animationDelay: "0.54s",
-              animationDuration: "1.62s",
-              fontSize: "clamp(1rem, 4vw, 1.18rem)",
-            }}
-          >
-            {paragraphs.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-        </div>
-
-        <div className="pt-12">
-          <ActionButton
-            audio={audio}
-            onClick={onContinue}
-            textColor={textStrong}
-            borderColor={textBorder}
-            delay={3.6}
-          >
-            Begin {nextLevel.name}
-          </ActionButton>
         </div>
       </div>
     </div>
