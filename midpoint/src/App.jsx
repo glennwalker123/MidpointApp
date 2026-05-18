@@ -468,6 +468,7 @@ const LEVELS = [
         midpointName: "Blue",
         fact: "Blue is usually the last colour to enter a language. Homer never used a word for it \u2014 in the Iliad and Odyssey, the sea is 'wine-dark' and the sky is 'bronze'. The Hebrew Bible has no general word for blue. Egypt was an exception, with a word for blue five thousand years ago and the first man-made blue paint." },
     ],
+    bridge: "Words for colour are new in the long history of colour. The pigments of stone were already what they are when humans first arrived.",
   },
   {
     id: 2,
@@ -1388,9 +1389,12 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
             // The prologue (Origin) doesn't carry a chapter number; chapters
             // begin at Stone, which sits at index 1 and displays as "01".
             const tileNumber = level.prologue ? null : String(i).padStart(2, "0");
-            const lockedBg = "oklch(0.74 0.028 260)";
-            const lockedTextSoft = "oklch(0.34 0.024 260)";
-            const lockedIconStroke = "oklch(0.44 0.026 260)";
+            // Locked tiles sit a little darker than the cream bg but in the
+            // same hue family — feels like a quiet absence rather than a
+            // contrasting blue-grey.
+            const lockedBg = "oklch(0.82 0.014 80)";
+            const lockedTextSoft = "oklch(0.46 0.014 80)";
+            const lockedIconStroke = "oklch(0.55 0.014 80)";
             return (
               <button
                 key={level.id}
@@ -1407,7 +1411,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
                 style={{
                   height: "108px",
                   background: oklchStr(tileCol),
-                  animationDelay: `${0.15 + i * 0.05}s`,
+                  animationDelay: `${0.18 + i * 0.11}s`,
                 }}
               >
                 {tileNumber && (
@@ -1478,7 +1482,7 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
 
         <div
           className="pt-10 flex justify-between items-end fade-up"
-          style={{ animationDelay: `${0.15 + LEVELS.length * 0.06 + 0.3}s` }}
+          style={{ animationDelay: `${0.18 + LEVELS.length * 0.11 + 0.3}s` }}
         >
           <button
             onClick={openAbout}
