@@ -1252,12 +1252,18 @@ function Splash({ onDone }) {
     <div
       onClick={handleTap}
       className="fixed inset-0 overflow-hidden"
-      style={{
-        background: oklchStr(SPLASH_A),
-        zIndex: 200,
-        animation: "splashFadeOut 0.8s ease 3.6s forwards",
-      }}
+      style={{ zIndex: 200 }}
     >
+      {/* Cream background — fades out at the end. The wordmark below is a
+          sibling so it does NOT fade; it stays visible at its final
+          (onboarding-aligned) position right up to splash unmount. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: oklchStr(SPLASH_A),
+          animation: "splashFadeOut 1.0s ease 3.4s forwards",
+        }}
+      />
       <div
         className="absolute pointer-events-none font-display italic"
         style={{
@@ -1359,7 +1365,7 @@ function Onboarding({ onDone, audio }) {
 
   return (
     <div
-      className="min-h-screen flex justify-center screen-in"
+      className="min-h-screen flex justify-center"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       style={{
