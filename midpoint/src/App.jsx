@@ -2013,6 +2013,73 @@ function YourEye({ onBack, audio }) {
   );
   const nextTier = YOUR_EYE_TIERS[tier];
 
+  // --- TIER 2 INSIGHTS — hue strengths + time-of-day signature ---
+  function hueFamily(h) {
+    const x = ((h % 360) + 360) % 360;
+    if (x >= 330 || x < 25) return "reds";
+    if (x < 65) return "oranges";
+    if (x < 100) return "yellows";
+    if (x < 165) return "greens";
+    if (x < 260) return "blues";
+    return "purples";
+  }
+
+  const hueSummary = useMemo(() => {
+    if (tier < 2) return null;
+    const byFam = {};
+    for (const l of locks) {
+      // Only meaningful for chromatic locks — skip near-neutral
+      if (l.chroma == null || l.chroma < 0.04) continue;
+      const fam = hueFamily(l.hue);
+      if (!byFam[fam]) byFam[fam] = [];
+      byFam[fam].push(l.score);
+    }
+    const avgs = Object.entries(byFam)
+      .filter(([, scores]) => scores.length >= 3)
+      .map(([family, scores]) => ({
+        family,
+        avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+      }));
+    if (!avgs.length) return null;
+    avgs.sort((a, b) => b.avg - a.avg);
+    return {
+      best: avgs[0],
+      worst: avgs.length >= 2 ? avgs[avgs.length - 1] : null,
+    };
+  }, [locks, tier]);
+
+  function periodForHour(h) {
+    if (h >= 6 && h < 12) return "the morning";
+    if (h >= 12 && h < 18) return "the afternoon";
+    if (h >= 18 && h < 22) return "the evening";
+    return "the night";
+  }
+
+  const timeSummary = useMemo(() => {
+    if (tier < 2) return null;
+    const byPeriod = {};
+    for (const l of locks) {
+      const hr = new Date(l.timestamp).getHours();
+      const p = periodForHour(hr);
+      if (!byPeriod[p]) byPeriod[p] = [];
+      byPeriod[p].push(l.score);
+    }
+    const periods = Object.entries(byPeriod).map(([period, scores]) => ({
+      period,
+      avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+      count: scores.length,
+    }));
+    if (!periods.length) return null;
+    // Need at least two periods of play AND a real spread to claim a pattern.
+    const withEnoughData = periods.filter((p) => p.count >= 2);
+    if (withEnoughData.length < 2) {
+      const most = periods.sort((a, b) => b.count - a.count)[0];
+      return { onlyOne: true, period: most.period, count: most.count };
+    }
+    withEnoughData.sort((a, b) => b.avg - a.avg);
+    return { onlyOne: false, sharpest: withEnoughData[0] };
+  }, [locks, tier]);
+
   return (
     <div
       className="min-h-screen flex justify-center"
@@ -2080,6 +2147,51 @@ function YourEye({ onBack, audio }) {
                   named colour{uniqueColours === 1 ? "" : "s"}. There are
                   sixty-three in the journey.
                 </p>
+
+                {tier >= 2 && hueSummary && (
+                  <p>
+                    Your eye reads{" "}
+                    <span style={{ color: CREAM_TEXT.strong }}>
+                      {hueSummary.best.family}
+                    </span>{" "}
+                    most clearly
+                    {hueSummary.worst && hueSummary.worst.family !== hueSummary.best.family ? (
+                      <>
+                        {" "}
+                        and finds{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {hueSummary.worst.family}
+                        </span>{" "}
+                        hardest.
+                      </>
+                    ) : (
+                      "."
+                    )}
+                  </p>
+                )}
+
+                {tier >= 2 && timeSummary && (
+                  <p>
+                    {timeSummary.onlyOne ? (
+                      <>
+                        You play most often in{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {timeSummary.period}
+                        </span>
+                        .
+                      </>
+                    ) : (
+                      <>
+                        Your eye is sharpest in{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {timeSummary.sharpest.period}
+                        </span>
+                        .
+                      </>
+                    )}
+                  </p>
+                )}
+
                 {nextTier && (
                   <p style={{ color: CREAM_TEXT.soft }}>
                     <em>{nextTier.label}</em> opens after {nextTier.at} lock-ins.
