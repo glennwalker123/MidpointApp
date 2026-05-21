@@ -2080,6 +2080,91 @@ function YourEye({ onBack, audio }) {
     return { onlyOne: false, sharpest: withEnoughData[0] };
   }, [locks, tier]);
 
+  // --- TIER 3 INSIGHTS — bias (warm/cool), pace, steadiness ---
+  const biasSummary = useMemo(() => {
+    if (tier < 3) return null;
+    const isWarm = (h) => (h >= 0 && h < 90) || h >= 300;
+    const isCool = (h) => h >= 180 && h < 280;
+    const warm = locks.filter((l) => isWarm(l.hue) && l.chroma >= 0.04).map((l) => l.score);
+    const cool = locks.filter((l) => isCool(l.hue) && l.chroma >= 0.04).map((l) => l.score);
+    if (warm.length < 5 || cool.length < 5) return null;
+    const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const w = avg(warm);
+    const c = avg(cool);
+    const diff = w - c;
+    if (Math.abs(diff) < 3) return { kind: "even" };
+    return { kind: diff > 0 ? "warm" : "cool", diff: Math.abs(diff) };
+  }, [locks, tier]);
+
+  const paceSummary = useMemo(() => {
+    if (tier < 3) return null;
+    const ms = locks.filter((l) => l.msEngaged > 0).map((l) => l.msEngaged);
+    if (ms.length < 10) return null;
+    const median = [...ms].sort((a, b) => a - b)[Math.floor(ms.length / 2)];
+    return {
+      seconds: Math.round(median / 1000),
+      kind: median < 8000 ? "quick" : median > 22000 ? "deliberate" : "measured",
+    };
+  }, [locks, tier]);
+
+  const steadinessSummary = useMemo(() => {
+    if (tier < 3) return null;
+    const scores = locks.map((l) => l.score);
+    if (scores.length < 10) return null;
+    const m = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const variance =
+      scores.reduce((a, b) => a + (b - m) ** 2, 0) / scores.length;
+    const sd = Math.sqrt(variance);
+    return { sd, kind: sd < 12 ? "steady" : sd > 25 ? "varying" : "drifting" };
+  }, [locks, tier]);
+
+  // --- TIER 4 — full reading: sharpest moment, hardest colour, first &
+  // latest, and "your colour" (the mean OKLCH of every lock) ---
+  function circularMeanHue(hues) {
+    const sumSin = hues.reduce(
+      (s, h) => s + Math.sin((h * Math.PI) / 180),
+      0
+    );
+    const sumCos = hues.reduce(
+      (s, h) => s + Math.cos((h * Math.PI) / 180),
+      0
+    );
+    return ((Math.atan2(sumSin, sumCos) * 180) / Math.PI + 360) % 360;
+  }
+
+  const tier4 = useMemo(() => {
+    if (tier < 4) return null;
+    const sortedByTime = [...locks].sort((a, b) => a.timestamp - b.timestamp);
+    const first = sortedByTime[0];
+    const latest = sortedByTime[sortedByTime.length - 1];
+
+    // Sharpest single lock
+    const sharpest = locks.reduce((max, l) => (l.score > max.score ? l : max), locks[0]);
+
+    // Hardest: group by challenge name, find lowest mean score (where played ≥ 1)
+    const byChallenge = {};
+    for (const l of locks) {
+      if (!byChallenge[l.challenge]) byChallenge[l.challenge] = [];
+      byChallenge[l.challenge].push(l.score);
+    }
+    const challengeMeans = Object.entries(byChallenge).map(([name, scores]) => ({
+      name,
+      avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+    }));
+    challengeMeans.sort((a, b) => a.avg - b.avg);
+    const hardest = challengeMeans[0];
+
+    // "Your colour" — mean OKLCH of every lock
+    const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const yourColour = {
+      l: avg(locks.map((x) => x.lightness)),
+      c: avg(locks.map((x) => x.chroma)),
+      h: circularMeanHue(locks.map((x) => x.hue)),
+    };
+
+    return { first, latest, sharpest, hardest, yourColour };
+  }, [locks, tier]);
+
   return (
     <div
       className="min-h-screen flex justify-center"
@@ -2190,6 +2275,105 @@ function YourEye({ onBack, audio }) {
                       </>
                     )}
                   </p>
+                )}
+
+                {tier >= 3 && biasSummary && (
+                  <p>
+                    {biasSummary.kind === "even" ? (
+                      <>
+                        Your eye reads warm and cool colours with the same
+                        care.
+                      </>
+                    ) : (
+                      <>
+                        Your eye reads{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {biasSummary.kind}
+                        </span>{" "}
+                        colours more sharply than{" "}
+                        {biasSummary.kind === "warm" ? "cool" : "warm"} ones.
+                      </>
+                    )}
+                  </p>
+                )}
+
+                {tier >= 3 && paceSummary && (
+                  <p>
+                    You take a{" "}
+                    <span style={{ color: CREAM_TEXT.strong }}>
+                      {paceSummary.kind}
+                    </span>{" "}
+                    pace — about {paceSummary.seconds} second
+                    {paceSummary.seconds === 1 ? "" : "s"} with the band
+                    before locking.
+                  </p>
+                )}
+
+                {tier >= 3 && steadinessSummary && (
+                  <p>
+                    Your accuracy is{" "}
+                    <span style={{ color: CREAM_TEXT.strong }}>
+                      {steadinessSummary.kind === "steady"
+                        ? "steady"
+                        : steadinessSummary.kind === "varying"
+                        ? "wide-ranging"
+                        : "gently variable"}
+                    </span>{" "}
+                    from lock to lock.
+                  </p>
+                )}
+
+                {tier >= 4 && tier4 && (
+                  <>
+                    <p>
+                      You first found{" "}
+                      <span style={{ color: CREAM_TEXT.strong }}>
+                        {tier4.first.challenge}
+                      </span>
+                      . The most recent was{" "}
+                      <span style={{ color: CREAM_TEXT.strong }}>
+                        {tier4.latest.challenge}
+                      </span>
+                      .
+                    </p>
+                    <p>
+                      Your eye saw{" "}
+                      <span style={{ color: CREAM_TEXT.strong }}>
+                        {tier4.sharpest.challenge}
+                      </span>{" "}
+                      sharpest of all.
+                    </p>
+                    <p>
+                      You found{" "}
+                      <span style={{ color: CREAM_TEXT.strong }}>
+                        {tier4.hardest.name}
+                      </span>{" "}
+                      the hardest to read.
+                    </p>
+                    <p>
+                      And this is the average of every colour you have
+                      ever read &mdash; the quiet centre of your year of
+                      looking.
+                    </p>
+                    <div
+                      className="w-full h-24 mt-2"
+                      style={{
+                        background: oklchStr(tier4.yourColour),
+                      }}
+                      aria-label="Your colour"
+                    />
+                    <p
+                      className="font-display italic"
+                      style={{
+                        color: CREAM_TEXT.strong,
+                        fontSize: "clamp(1.4rem, 6vw, 2rem)",
+                        textAlign: "center",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Your colour.
+                    </p>
+                  </>
                 )}
 
                 {nextTier && (
