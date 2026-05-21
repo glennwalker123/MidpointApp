@@ -898,12 +898,35 @@ function rate(score) {
 // ============================================================================
 
 const ONBOARDED_KEY = "midpoint:onboarded";
+const LOCKS_KEY = "midpoint:locks";
 
 function readOnboarded() {
   try {
     return localStorage.getItem(ONBOARDED_KEY) === "1";
   } catch {
     return false;
+  }
+}
+
+// Persistent record of every locked-in colour. Each entry holds enough to
+// power the "Your Eye" reading and any later tiers without re-asking
+// anything — chapter + colour name, score, drift, hue, time of day, ms
+// spent looking before locking.
+function readLocks() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCKS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function appendLock(entry) {
+  try {
+    const locks = readLocks();
+    locks.push(entry);
+    localStorage.setItem(LOCKS_KEY, JSON.stringify(locks));
+  } catch {
+    // ignore — quota or private mode
   }
 }
 
@@ -1106,10 +1129,17 @@ export default function App() {
             onSelect={enterLevel}
             onOpenAbout={() => setScreen({ name: "about" })}
             onOpenSettings={() => setScreen({ name: "settings" })}
+            onOpenYourEye={() => setScreen({ name: "your-eye" })}
             completed={completed}
             audio={audioRef.current}
             unlocking={unlocking}
             onUnlockingDone={() => setUnlocking(null)}
+          />
+        )}
+        {!splashing && screen.name === "your-eye" && (
+          <YourEye
+            onBack={() => setScreen({ name: "home" })}
+            audio={audioRef.current}
           />
         )}
         {!splashing && screen.name === "about" && (
@@ -1520,7 +1550,7 @@ function Onboarding({ onDone, audio }) {
 // HOME
 // ============================================================================
 
-function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocking, onUnlockingDone }) {
+function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, completed, audio, unlocking, onUnlockingDone }) {
   function openAbout() {
     if (audio) audio.buttonTap();
     onOpenAbout();
@@ -1528,6 +1558,10 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
   function openSettings() {
     if (audio) audio.buttonTap();
     onOpenSettings();
+  }
+  function openYourEye() {
+    if (audio) audio.buttonTap();
+    onOpenYourEye();
   }
 
   // Clear the unlocking flag after the sweep finishes (delay 0.6s + 1.8s anim + small buffer)
@@ -1551,15 +1585,20 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, completed, audio, unlocki
       style={{ background: oklchStr(HOME_BG) }}
     >
       <div className="w-full max-w-md px-8 py-14 flex flex-col">
-        <div className="mb-12">
-          <div className="fade-up">
-            <div
-              className="font-display italic leading-none"
-              style={{ color: CREAM_TEXT.strong, fontSize: "22px" }}
-            >
-              midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
-            </div>
+        <div className="mb-12 flex justify-between items-baseline fade-up">
+          <div
+            className="font-display italic leading-none"
+            style={{ color: CREAM_TEXT.strong, fontSize: "22px" }}
+          >
+            midpoint<span style={{ color: CREAM_TEXT.hint }}>.</span>
           </div>
+          <button
+            onClick={openYourEye}
+            className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+            style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+          >
+            Your eye
+          </button>
         </div>
 
         <div className="flex flex-col gap-3 flex-1 content-start">
@@ -1933,6 +1972,149 @@ function Sources({ onBack, audio }) {
 }
 
 // ============================================================================
+// YOUR EYE — personal perception reading. Tier 1 only for now: total time
+// looking + count of colours met. Later tiers (hue strengths, time-of-day
+// signature, drift bias, full reading) unlock as the player accumulates
+// lock-ins. The reading is local-only — never leaves the device.
+// ============================================================================
+
+const YOUR_EYE_TIERS = [
+  { at: 5,  label: "first reading" },
+  { at: 20, label: "your patterns" },
+  { at: 40, label: "your bias" },
+  { at: 60, label: "the full reading" },
+];
+
+function YourEye({ onBack, audio }) {
+  const locks = useMemo(() => readLocks(), []);
+  const count = locks.length;
+  const uniqueColours = useMemo(
+    () => new Set(locks.map((l) => l.challenge)).size,
+    [locks]
+  );
+  const totalMs = useMemo(
+    () => locks.reduce((s, l) => s + (l.msEngaged || 0), 0),
+    [locks]
+  );
+
+  function formatTime(ms) {
+    const totalSec = Math.max(0, Math.round(ms / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    if (m === 0) return `${s} seconds`;
+    if (s === 0) return `${m} minute${m === 1 ? "" : "s"}`;
+    return `${m} minute${m === 1 ? "" : "s"} and ${s} second${s === 1 ? "" : "s"}`;
+  }
+
+  // What tier the player has unlocked. tier 0 = nothing yet.
+  const tier = YOUR_EYE_TIERS.reduce(
+    (acc, t) => (count >= t.at ? acc + 1 : acc),
+    0
+  );
+  const nextTier = YOUR_EYE_TIERS[tier];
+
+  return (
+    <div
+      className="min-h-screen flex justify-center"
+      style={{ background: oklchStr(HOME_BG) }}
+    >
+      <div className="w-full max-w-md px-8 py-14 flex flex-col">
+        <div className="flex-1">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
+            style={{
+              color: CREAM_TEXT.soft,
+              animationDelay: "0.27s",
+              animationDuration: "1.08s",
+            }}
+          >
+            Your eye
+          </div>
+
+          <h1
+            className="font-display italic leading-[0.95] mb-10 fade-up"
+            style={{
+              color: CREAM_TEXT.strong,
+              animationDelay: "0.72s",
+              animationDuration: "1.44s",
+              fontSize: "clamp(2.6rem, 10vw, 3.6rem)",
+            }}
+          >
+            A reading.
+          </h1>
+
+          <div
+            className="font-display leading-relaxed space-y-5 max-w-sm fade-up"
+            style={{
+              color: CREAM_TEXT.body,
+              animationDelay: "1.26s",
+              animationDuration: "1.62s",
+              fontSize: "clamp(0.94rem, 3.9vw, 1.06rem)",
+            }}
+          >
+            {tier === 0 ? (
+              <>
+                <p>
+                  This page collects what midpoint quietly notices about
+                  the way you look. Nothing here leaves your phone.
+                </p>
+                <p>
+                  Your first reading will open after five lock-ins.
+                  {count > 0 && ` You have ${count} so far.`}
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  You have spent{" "}
+                  <span style={{ color: CREAM_TEXT.strong }}>
+                    {formatTime(totalMs)}
+                  </span>{" "}
+                  looking carefully.
+                </p>
+                <p>
+                  You have met{" "}
+                  <span style={{ color: CREAM_TEXT.strong }}>
+                    {uniqueColours}
+                  </span>{" "}
+                  named colour{uniqueColours === 1 ? "" : "s"}. There are
+                  sixty-three in the journey.
+                </p>
+                {nextTier && (
+                  <p style={{ color: CREAM_TEXT.soft }}>
+                    <em>{nextTier.label}</em> opens after {nextTier.at} lock-ins.
+                    {" "}
+                    {nextTier.at - count} to go.
+                  </p>
+                )}
+                {!nextTier && (
+                  <p style={{ color: CREAM_TEXT.soft }}>
+                    <em>You have read every chapter.</em> Each reading
+                    deepens with everything you go on to find.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-12">
+          <ActionButton
+            audio={audio}
+            onClick={onBack}
+            textColor={CREAM_TEXT.strong}
+            borderColor={CREAM_TEXT.borderStrong}
+            delay={2.16}
+          >
+            Return
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // MAKER — short page about the person behind the app
 // ============================================================================
 
@@ -2142,6 +2324,12 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
 
   const drag = useRef({ active: false, startX: 0, startPos: 0 });
   const rightHalfRef = useRef(null);
+  // ms timestamp of when the current challenge entered "play" — used to
+  // record time-looking on lock for the "Your Eye" reading.
+  const challengeStartAt = useRef(null);
+  useEffect(() => {
+    if (phase === "play") challengeStartAt.current = Date.now();
+  }, [phase]);
 
   function onPointerDown(e) {
     if (phase !== "play") return;
@@ -2175,6 +2363,23 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   function lock() {
     audio.playTone(candidateCol, { duration: 1.6 });
     setResults((prev) => [...prev, { score, midpointCol: truthCol }]);
+    // Persistent log for the "Your Eye" reading. Captures enough for tier
+    // 1 (time + count) and the later tiers (hue strength, time-of-day,
+    // drift) without needing to phone home.
+    const now = Date.now();
+    appendLock({
+      chapterId: level.id,
+      chapter: level.name,
+      challengeId: challengeIdx,
+      challenge: challenge.midpointName,
+      score,
+      drift: position - targetPos,
+      hue: Math.round(truthCol.h),
+      lightness: +truthCol.l.toFixed(3),
+      chroma: +truthCol.c.toFixed(3),
+      timestamp: now,
+      msEngaged: challengeStartAt.current ? now - challengeStartAt.current : 0,
+    });
     setPhase("reveal");
     // truth tone arrives shortly after, like a gentle reply
     setTimeout(() => audio.playTone(truthCol, { duration: 2.4 }), 700);
