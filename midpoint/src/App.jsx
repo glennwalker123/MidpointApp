@@ -885,6 +885,33 @@ function randomStart() {
   return left ? 0.12 + Math.random() * 0.18 : 0.70 + Math.random() * 0.18;
 }
 
+// FREE PLAY — generate a synthetic level of 8 random colour pairs.
+// Same shape as a chapter so Level can render it, but with `freeplay: true`
+// so Level knows to skip intro and reflection.
+function randomFreeChallenge() {
+  const baseHue = Math.random() * 360;
+  const hueGap = 25 + Math.random() * 25;        // 25-50° between a and b
+  const baseL = 0.40 + Math.random() * 0.25;     // mid lightness
+  const baseC = 0.10 + Math.random() * 0.10;     // moderate chroma
+  const lGap = (Math.random() - 0.5) * 0.20;     // ±0.10 lightness offset
+  return {
+    a: { l: +(baseL + lGap).toFixed(3), c: +baseC.toFixed(3), h: +baseHue.toFixed(1) },
+    b: { l: +(baseL - lGap).toFixed(3), c: +baseC.toFixed(3), h: +((baseHue + hueGap) % 360).toFixed(1) },
+    midpointName: "",
+    fact: "",
+  };
+}
+
+function generateFreePlayLevel() {
+  return {
+    id: "freeplay",
+    name: "Free play",
+    freeplay: true,
+    bg: { l: 0.10, c: 0.01, h: 80 },
+    challenges: Array.from({ length: 8 }, randomFreeChallenge),
+  };
+}
+
 function rate(score) {
   if (score >= 96) return "Perfect";
   if (score >= 88) return "Sharp";
@@ -962,6 +989,8 @@ export default function App() {
   const [hasEverInteracted, setHasEverInteracted] = useState(false);
   const [unlocking, setUnlocking] = useState(null);
   const [splashing, setSplashing] = useState(true);
+  const [freePlayLevel, setFreePlayLevel] = useState(null);
+  const [freePlayGen, setFreePlayGen] = useState(0);
   const audioRef = useRef(null);
 
   if (!audioRef.current) {
@@ -995,6 +1024,20 @@ export default function App() {
     audioRef.current.ensureContext(); // unlock on user gesture
     audioRef.current.startAmbient(); // start (or continue) the nature ambient
     setScreen({ name: "level", levelId: id });
+  }
+
+  function enterFreePlay() {
+    audioRef.current.ensureContext();
+    audioRef.current.startAmbient();
+    setFreePlayLevel(generateFreePlayLevel());
+    setFreePlayGen((g) => g + 1);
+    setScreen({ name: "freeplay" });
+  }
+
+  function replayFreePlay() {
+    audioRef.current.stopPad();
+    setFreePlayLevel(generateFreePlayLevel());
+    setFreePlayGen((g) => g + 1);
   }
 
   // Bridge: mark current chapter complete, then jump straight into the next
@@ -1130,10 +1173,26 @@ export default function App() {
             onOpenAbout={() => setScreen({ name: "about" })}
             onOpenSettings={() => setScreen({ name: "settings" })}
             onOpenYourEye={() => setScreen({ name: "your-eye" })}
+            onEnterFreePlay={enterFreePlay}
             completed={completed}
             audio={audioRef.current}
             unlocking={unlocking}
             onUnlockingDone={() => setUnlocking(null)}
+          />
+        )}
+        {!splashing && screen.name === "freeplay" && freePlayLevel && (
+          <Level
+            key={`freeplay-${freePlayGen}`}
+            level={freePlayLevel}
+            audio={audioRef.current}
+            hasEverInteracted={hasEverInteracted}
+            onFirstInteract={() => setHasEverInteracted(true)}
+            onExit={() => {
+              setFreePlayLevel(null);
+              setScreen({ name: "home" });
+            }}
+            onReplay={replayFreePlay}
+            nextLevel={null}
           />
         )}
         {!splashing && screen.name === "your-eye" && (
@@ -1550,7 +1609,7 @@ function Onboarding({ onDone, audio }) {
 // HOME
 // ============================================================================
 
-function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, completed, audio, unlocking, onUnlockingDone }) {
+function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, onEnterFreePlay, completed, audio, unlocking, onUnlockingDone }) {
   function openAbout() {
     if (audio) audio.buttonTap();
     onOpenAbout();
@@ -1563,6 +1622,13 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, completed,
     if (audio) audio.buttonTap();
     onOpenYourEye();
   }
+  function enterFreePlay() {
+    if (audio) audio.buttonTap();
+    onEnterFreePlay();
+  }
+
+  // Free play unlocks once Origin (chapter id 1) is complete.
+  const freePlayUnlocked = completed.has(1);
 
   // Clear the unlocking flag after the sweep finishes (delay 0.6s + 1.8s anim + small buffer)
   // and play a soft swelling tone alongside the sweep — same family as the
@@ -1711,6 +1777,32 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, completed,
             );
           })}
         </div>
+
+        {freePlayUnlocked && (
+          <button
+            onClick={enterFreePlay}
+            className="relative w-full mt-3 h-14 flex items-center justify-between px-5 fade-up transition-transform active:scale-[0.99]"
+            style={{
+              background: "transparent",
+              border: `1px solid ${CREAM_TEXT.border}`,
+              animationDelay: `${0.3 + LEVELS.length * 0.22 + 0.2}s`,
+              animationDuration: "1.8s",
+            }}
+          >
+            <span
+              className="font-display italic"
+              style={{ color: CREAM_TEXT.strong, fontSize: "20px", lineHeight: 1 }}
+            >
+              Free play
+            </span>
+            <span
+              className="text-[10px] tracking-[0.32em] uppercase"
+              style={{ color: CREAM_TEXT.soft }}
+            >
+              eight random
+            </span>
+          </button>
+        )}
 
         <div
           className="pt-10 flex justify-between items-end fade-up"
@@ -2564,9 +2656,10 @@ function Settings({ onBack, audio, muted, onToggleMute }) {
 // LEVEL
 // ============================================================================
 
-function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBridge, nextLevel }) {
+function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBridge, onReplay, nextLevel }) {
   const [challengeIdx, setChallengeIdx] = useState(0);
-  const [phase, setPhase] = useState("intro");
+  // Free-play levels skip the intro card and start at "play".
+  const [phase, setPhase] = useState(level.freeplay ? "play" : "intro");
   const [position, setPosition] = useState(randomStart);
   const [results, setResults] = useState([]);
   const [hasReleased, setHasReleased] = useState(false);
@@ -2682,6 +2775,24 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   }
 
   function continueFromReveal() {
+    // Free-play skips the reflection card — straight from reveal into the
+    // next challenge, or into the FreePlayComplete rest screen.
+    if (level.freeplay) {
+      audio.stopPad();
+      setTimeout(() => {
+        setExpansion(null);
+        if (challengeIdx < total - 1) {
+          setChallengeIdx(challengeIdx + 1);
+          setPosition(randomStart());
+          setPhase("play");
+          setHasReleased(false);
+        } else {
+          setPhase("complete");
+        }
+      }, 900);
+      return;
+    }
+
     if (!rightHalfRef.current) {
       setPhase("reflection");
       return;
@@ -2811,7 +2922,14 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
       )}
 
       {phase === "complete" && (
-        level.prologue && level.bridge && nextLevel && onBridge ? (
+        level.freeplay ? (
+          <FreePlayComplete
+            results={results}
+            audio={audio}
+            onReplay={onReplay}
+            onHome={() => onExit(false)}
+          />
+        ) : level.prologue && level.bridge && nextLevel && onBridge ? (
           <BridgeScreen
             level={level}
             nextLevel={nextLevel}
@@ -3252,6 +3370,103 @@ function Reflection({ color, name, fact, audio, onContinue, isLast, buttonText }
 // ============================================================================
 // LEVEL COMPLETE
 // ============================================================================
+
+// ============================================================================
+// FREE PLAY COMPLETE — rest screen after a free-play set of 8.
+// Soft pastel wash, brief score line, big replay icon, small return link.
+// ============================================================================
+
+function FreePlayComplete({ results, audio, onReplay, onHome }) {
+  const avg = results.length
+    ? Math.round(results.reduce((s, r) => s + r.score, 0) / results.length)
+    : 0;
+  const bg = { l: 0.86, c: 0.04, h: 80 };
+
+  function handleReplay() {
+    if (audio) audio.buttonTap();
+    onReplay();
+  }
+
+  function handleHome() {
+    if (audio) audio.buttonTap();
+    onHome();
+  }
+
+  return (
+    <div
+      className="min-h-screen flex justify-center screen-in"
+      style={{ background: oklchStr(bg) }}
+    >
+      <div className="w-full max-w-md flex flex-col px-8 py-14">
+        <div className="flex-1 flex flex-col justify-center items-start">
+          <div
+            className="text-[11px] tracking-[0.4em] uppercase mb-6 fade-up"
+            style={{ color: CREAM_TEXT.soft, animationDelay: "0.4s" }}
+          >
+            Eight middles
+          </div>
+
+          <h1
+            className="font-display italic mb-10 fade-up leading-none"
+            style={{
+              color: CREAM_TEXT.strong,
+              animationDelay: "1.0s",
+              animationDuration: "1.6s",
+              fontSize: "clamp(4.2rem, 16vw, 6rem)",
+            }}
+          >
+            Rest.
+          </h1>
+
+          <p
+            className="font-display italic fade-up"
+            style={{
+              color: CREAM_TEXT.body,
+              animationDelay: "2.0s",
+              fontSize: "1.1rem",
+            }}
+          >
+            Your eye averaged{" "}
+            <span style={{ color: CREAM_TEXT.strong }}>{avg}%</span>.
+          </p>
+        </div>
+
+        <div className="pt-8 flex items-center justify-between fade-up"
+             style={{ animationDelay: "3.0s", animationDuration: "1.4s" }}>
+          <button
+            onClick={handleHome}
+            className="text-[11px] tracking-[0.35em] uppercase pb-1 border-b transition-colors duration-500"
+            style={{ color: CREAM_TEXT.soft, borderColor: CREAM_TEXT.border }}
+          >
+            Return
+          </button>
+          <button
+            onClick={handleReplay}
+            aria-label="Play another eight"
+            className="w-14 h-14 flex items-center justify-center border transition-all duration-500 active:scale-[0.95] rounded-full"
+            style={{ borderColor: CREAM_TEXT.borderStrong }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 12a8 8 0 1 0 2.5-5.8"
+                stroke={CREAM_TEXT.strong}
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M4 4v5h5"
+                stroke={CREAM_TEXT.strong}
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function LevelComplete({ level, results, bgColor, audio, onHome }) {
   const avg = Math.round(
