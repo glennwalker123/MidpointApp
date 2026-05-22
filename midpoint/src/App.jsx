@@ -205,33 +205,44 @@ class AudioEngine {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
 
-    // Body — sine kick. Higher floor so phone speakers reproduce it.
-    const body = this.ctx.createOscillator();
-    body.type = "sine";
-    body.frequency.setValueAtTime(160, t);
-    body.frequency.exponentialRampToValueAtTime(75, t + 0.14);
-    const bodyGain = this.ctx.createGain();
-    bodyGain.gain.setValueAtTime(0.0001, t);
-    bodyGain.gain.linearRampToValueAtTime(gainVal, t + 0.01);
-    bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
-    body.connect(bodyGain);
-    bodyGain.connect(this.masterGain);
-    body.start(t);
-    body.stop(t + 0.36);
+    // Filtered noise tick — the "felted" body. Short burst of white noise
+    // through a bandpass tuned in the mid-mids, giving a soft wooden /
+    // brushed character rather than a kick. This is the audible layer on
+    // phone speakers.
+    const noiseDur = 0.18;
+    const buf = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * noiseDur), this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1100;   // soft tick, not a snap
+    bp.Q.value = 1.4;
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, t);
+    noiseGain.gain.linearRampToValueAtTime(gainVal * 0.55, t + 0.005);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    noise.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    noise.start(t);
+    noise.stop(t + noiseDur);
 
-    // Click transient — gives the kick presence on small speakers.
-    const click = this.ctx.createOscillator();
-    click.type = "triangle";
-    click.frequency.setValueAtTime(880, t);
-    click.frequency.exponentialRampToValueAtTime(220, t + 0.04);
-    const clickGain = this.ctx.createGain();
-    clickGain.gain.setValueAtTime(0.0001, t);
-    clickGain.gain.linearRampToValueAtTime(gainVal * 0.45, t + 0.003);
-    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
-    click.connect(clickGain);
-    clickGain.connect(this.masterGain);
-    click.start(t);
-    click.stop(t + 0.08);
+    // Sub swell — slow attack sine, breathes underneath rather than punches.
+    // Slight detune via a second oscillator a fifth-ish below for warmth.
+    const sub = this.ctx.createOscillator();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(140, t);
+    sub.frequency.linearRampToValueAtTime(120, t + 0.45);
+    const subGain = this.ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, t);
+    subGain.gain.linearRampToValueAtTime(gainVal * 0.5, t + 0.06); // slow attack
+    subGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    sub.connect(subGain);
+    subGain.connect(this.masterGain);
+    sub.start(t);
+    sub.stop(t + 0.6);
   }
 
   slowBeat(durationS = 18) {
