@@ -166,17 +166,20 @@ class AudioEngine {
     this.chordNodes = null;
   }
 
-  // Soft sub-bass pulse — used in free-play. Starts at the 4th step of a
-  // round (challengeIdx === 3), runs at ~55 BPM, then slows + fades across
-  // the 8th step (challengeIdx === 7) until silent.
-  startBeat(bpm = 55) {
+  // Chill-out acoustic groove — used in free-play. Starts at the 4th step
+  // of a round (challengeIdx === 3) at ~72 BPM, then slows + fades across
+  // the 8th step (challengeIdx === 7) until silent. The pattern is a
+  // four-step backbeat: soft kick on 1, shaker on 2, brushed snare on 3,
+  // shaker on 4 — like a relaxed Bonobo / Nightmares on Wax pulse.
+  startBeat(bpm = 72) {
     if (!this.ensureContext()) return;
     if (this.muted) return;
     this.stopBeat();
     this.beatActive = true;
     this.beatBpm = bpm;
     this.beatStartBpm = bpm;
-    this.beatGain = 0.55;
+    this.beatGain = 0.20;
+    this.beatStep = 0;
     this.beatSlowing = false;
     this.scheduleBeat();
   }
@@ -196,53 +199,104 @@ class AudioEngine {
         return;
       }
     }
-    this.playBeatTone(gain);
+    this.playPatternStep(this.beatStep, gain);
+    this.beatStep = (this.beatStep + 1) % 4;
     const interval = 60000 / Math.max(15, bpm);
     this.beatTimeout = setTimeout(() => this.scheduleBeat(), interval);
   }
 
-  playBeatTone(gainVal) {
+  playPatternStep(step, gainVal) {
     if (!this.ctx || this.muted) return;
-    const t = this.ctx.currentTime;
+    if (step === 0) this.playSoftKick(gainVal * 0.85);
+    else if (step === 1) this.playShaker(gainVal * 0.30);
+    else if (step === 2) this.playBrush(gainVal * 0.70);
+    else this.playShaker(gainVal * 0.30);
+  }
 
-    // Filtered noise tick — the "felted" body. Short burst of white noise
-    // through a bandpass tuned in the mid-mids, giving a soft wooden /
-    // brushed character rather than a kick. This is the audible layer on
-    // phone speakers.
-    const noiseDur = 0.18;
-    const buf = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * noiseDur), this.ctx.sampleRate);
+  // Helper: returns a short white-noise buffer.
+  makeNoiseBuffer(seconds) {
+    const buf = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * seconds), this.ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+
+  // Soft acoustic kick — low sine body + lowpassed noise "skin" so it
+  // reads as a hand-played thump, not a sub kick. Plays at downbeat (step 0).
+  playSoftKick(gainVal) {
+    const t = this.ctx.currentTime;
+    const body = this.ctx.createOscillator();
+    body.type = "sine";
+    body.frequency.setValueAtTime(110, t);
+    body.frequency.exponentialRampToValueAtTime(70, t + 0.18);
+    const bodyGain = this.ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, t);
+    bodyGain.gain.linearRampToValueAtTime(gainVal * 0.7, t + 0.012);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    body.connect(bodyGain);
+    bodyGain.connect(this.masterGain);
+    body.start(t);
+    body.stop(t + 0.3);
+
     const noise = this.ctx.createBufferSource();
-    noise.buffer = buf;
+    noise.buffer = this.makeNoiseBuffer(0.13);
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 260;
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(0.0001, t);
+    nGain.gain.linearRampToValueAtTime(gainVal * 0.4, t + 0.006);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    noise.connect(lp);
+    lp.connect(nGain);
+    nGain.connect(this.masterGain);
+    noise.start(t);
+    noise.stop(t + 0.14);
+  }
+
+  // Brushed snare — bandpassed noise burst, soft attack. Plays on the
+  // backbeat (step 2). Sits in the mid-mids so it's audible on phone speakers.
+  playBrush(gainVal) {
+    const t = this.ctx.currentTime;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.makeNoiseBuffer(0.22);
     const bp = this.ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.frequency.value = 1100;   // soft tick, not a snap
-    bp.Q.value = 1.4;
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.0001, t);
-    noiseGain.gain.linearRampToValueAtTime(gainVal * 0.55, t + 0.005);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    bp.frequency.value = 1400;
+    bp.Q.value = 0.9;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(gainVal, t + 0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     noise.connect(bp);
-    bp.connect(noiseGain);
-    noiseGain.connect(this.masterGain);
+    bp.connect(g);
+    g.connect(this.masterGain);
     noise.start(t);
-    noise.stop(t + noiseDur);
+    noise.stop(t + 0.24);
+  }
 
-    // Sub swell — slow attack sine, breathes underneath rather than punches.
-    // Slight detune via a second oscillator a fifth-ish below for warmth.
-    const sub = this.ctx.createOscillator();
-    sub.type = "sine";
-    sub.frequency.setValueAtTime(140, t);
-    sub.frequency.linearRampToValueAtTime(120, t + 0.45);
-    const subGain = this.ctx.createGain();
-    subGain.gain.setValueAtTime(0.0001, t);
-    subGain.gain.linearRampToValueAtTime(gainVal * 0.5, t + 0.06); // slow attack
-    subGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
-    sub.connect(subGain);
-    subGain.connect(this.masterGain);
-    sub.start(t);
-    sub.stop(t + 0.6);
+  // Shaker tick — short highpassed noise, very quiet. Plays on the off-beats
+  // (steps 1 and 3) to keep the groove flowing without drawing attention.
+  playShaker(gainVal) {
+    const t = this.ctx.currentTime;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.makeNoiseBuffer(0.07);
+    const hp = this.ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 4500;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 9000;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(gainVal, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    noise.connect(hp);
+    hp.connect(lp);
+    lp.connect(g);
+    g.connect(this.masterGain);
+    noise.start(t);
+    noise.stop(t + 0.08);
   }
 
   slowBeat(durationS = 18) {
@@ -3149,7 +3203,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   // brief (~1.5s) and runs the expand-and-fade transition instead.
   useEffect(() => {
     if (phase !== "reveal") return;
-    const delay = level.freeplay ? 1500 : 3600;
+    const delay = level.freeplay ? 2500 : 3600;
     const t = setTimeout(() => {
       continueFromReveal();
     }, delay);
@@ -3395,7 +3449,6 @@ function ChallengeView({
   return (
     <div
       className="min-h-screen flex justify-center screen-in"
-      key={challengeIdx}
       style={{
         background: chromeBg(lerpOklch(challenge.a, challenge.b, 0.5)),
         transition: "background 1.44s ease",
@@ -3417,7 +3470,7 @@ function ChallengeView({
           <div className="relative w-full overflow-hidden">
             {phase === "play" ? (
               <div
-                className="w-full h-full candidate-drag cursor-grab active:cursor-grabbing relative overflow-hidden"
+                className="w-full h-full candidate-drag cursor-grab active:cursor-grabbing relative overflow-hidden fade-in"
                 style={{
                   background: oklchStr(candidateCol),
                   transition: isDragging ? "none" : "background 0.54s ease",
