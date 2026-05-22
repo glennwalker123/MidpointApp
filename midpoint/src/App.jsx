@@ -176,7 +176,7 @@ class AudioEngine {
     this.beatActive = true;
     this.beatBpm = bpm;
     this.beatStartBpm = bpm;
-    this.beatGain = 0.22;
+    this.beatGain = 0.55;
     this.beatSlowing = false;
     this.scheduleBeat();
   }
@@ -204,18 +204,34 @@ class AudioEngine {
   playBeatTone(gainVal) {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(85, t);
-    osc.frequency.exponentialRampToValueAtTime(45, t + 0.12); // pitch drop = kick
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(gainVal, t + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(t);
-    osc.stop(t + 0.35);
+
+    // Body — sine kick. Higher floor so phone speakers reproduce it.
+    const body = this.ctx.createOscillator();
+    body.type = "sine";
+    body.frequency.setValueAtTime(160, t);
+    body.frequency.exponentialRampToValueAtTime(75, t + 0.14);
+    const bodyGain = this.ctx.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, t);
+    bodyGain.gain.linearRampToValueAtTime(gainVal, t + 0.01);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+    body.connect(bodyGain);
+    bodyGain.connect(this.masterGain);
+    body.start(t);
+    body.stop(t + 0.36);
+
+    // Click transient — gives the kick presence on small speakers.
+    const click = this.ctx.createOscillator();
+    click.type = "triangle";
+    click.frequency.setValueAtTime(880, t);
+    click.frequency.exponentialRampToValueAtTime(220, t + 0.04);
+    const clickGain = this.ctx.createGain();
+    clickGain.gain.setValueAtTime(0.0001, t);
+    clickGain.gain.linearRampToValueAtTime(gainVal * 0.45, t + 0.003);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    click.connect(clickGain);
+    clickGain.connect(this.masterGain);
+    click.start(t);
+    click.stop(t + 0.08);
   }
 
   slowBeat(durationS = 18) {
@@ -1036,15 +1052,42 @@ function randomStart() {
 // FREE PLAY — generate a synthetic level of 8 random colour pairs.
 // Same shape as a chapter so Level can render it, but with `freeplay: true`
 // so Level knows to skip intro and reflection.
+
+// Approximate perceptual distance between two OKLCH colours, treated as
+// OKLab points. Used to reject pairs that look too similar to read.
+function oklchDistance(a, b) {
+  const aa = a.c * Math.cos((a.h * Math.PI) / 180);
+  const ab = a.c * Math.sin((a.h * Math.PI) / 180);
+  const ba = b.c * Math.cos((b.h * Math.PI) / 180);
+  const bb = b.c * Math.sin((b.h * Math.PI) / 180);
+  const dl = a.l - b.l;
+  const da = aa - ba;
+  const db = ab - bb;
+  return Math.sqrt(dl * dl + da * da + db * db);
+}
+
 function randomFreeChallenge() {
-  const baseHue = Math.random() * 360;
-  const hueGap = 25 + Math.random() * 25;        // 25-50° between a and b
-  const baseL = 0.40 + Math.random() * 0.25;     // mid lightness
-  const baseC = 0.10 + Math.random() * 0.10;     // moderate chroma
-  const lGap = (Math.random() - 0.5) * 0.20;     // ±0.10 lightness offset
+  // Rejection-sample until a and b are visibly distinct.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const baseHue = Math.random() * 360;
+    const hueDir = Math.random() < 0.5 ? -1 : 1;
+    const hueGap = (45 + Math.random() * 55) * hueDir;   // 45-100° between a and b
+    const baseL = 0.42 + Math.random() * 0.18;           // 0.42-0.60 mid lightness
+    const baseC = 0.13 + Math.random() * 0.08;           // 0.13-0.21 stronger chroma
+    // Lightness offset between a and b: at least ±0.07, up to ±0.14
+    const lGapMag = 0.07 + Math.random() * 0.07;
+    const lGap = Math.random() < 0.5 ? lGapMag : -lGapMag;
+    const a = { l: +(baseL + lGap).toFixed(3), c: +baseC.toFixed(3), h: +((baseHue + 360) % 360).toFixed(1) };
+    const b = { l: +(baseL - lGap).toFixed(3), c: +baseC.toFixed(3), h: +((baseHue + hueGap + 360) % 360).toFixed(1) };
+    // Require a meaningful OKLab distance so a and b never look the same.
+    if (oklchDistance(a, b) >= 0.18) {
+      return { a, b, midpointName: "", fact: "" };
+    }
+  }
+  // Fallback — guaranteed distinct: a warm dark vs a cool light.
   return {
-    a: { l: +(baseL + lGap).toFixed(3), c: +baseC.toFixed(3), h: +baseHue.toFixed(1) },
-    b: { l: +(baseL - lGap).toFixed(3), c: +baseC.toFixed(3), h: +((baseHue + hueGap) % 360).toFixed(1) },
+    a: { l: 0.42, c: 0.18, h: 25 },
+    b: { l: 0.62, c: 0.18, h: 215 },
     midpointName: "",
     fact: "",
   };
@@ -2247,6 +2290,20 @@ const YOUR_EYE_TIERS = [
   { at: 60, label: "the full reading" },
 ];
 
+function YourEyeSection({ label, children }) {
+  return (
+    <div>
+      <div
+        className="text-[10px] tracking-[0.4em] uppercase mb-3"
+        style={{ color: CREAM_TEXT.soft }}
+      >
+        {label}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
 function YourEye({ onBack, audio }) {
   const locks = useMemo(() => readLocks(), []);
   const count = locks.length;
@@ -2458,7 +2515,7 @@ function YourEye({ onBack, audio }) {
           </h1>
 
           <div
-            className="font-display leading-relaxed space-y-5 max-w-sm fade-up"
+            className="font-display leading-relaxed max-w-sm fade-up"
             style={{
               color: CREAM_TEXT.body,
               animationDelay: "1.26s",
@@ -2467,7 +2524,7 @@ function YourEye({ onBack, audio }) {
             }}
           >
             {tier === 0 ? (
-              <>
+              <div className="space-y-4">
                 <p>
                   This page collects what midpoint quietly notices about
                   the way you look. Nothing here leaves your phone.
@@ -2476,182 +2533,195 @@ function YourEye({ onBack, audio }) {
                   Your first reading will open after five lock-ins.
                   {count > 0 && ` You have ${count} so far.`}
                 </p>
-              </>
+              </div>
             ) : (
-              <>
-                <p>
-                  You have spent{" "}
-                  <span style={{ color: CREAM_TEXT.strong }}>
-                    {formatTime(totalMs)}
-                  </span>{" "}
-                  looking carefully.
-                </p>
-                <p>
-                  You have met{" "}
-                  <span style={{ color: CREAM_TEXT.strong }}>
-                    {uniqueColours}
-                  </span>{" "}
-                  named colour{uniqueColours === 1 ? "" : "s"}. There are
-                  sixty-three in the journey.
-                </p>
-
-                {tier >= 2 && hueSummary && (
+              <div className="space-y-9">
+                {/* TIER 1 — where you are */}
+                <YourEyeSection label="In total">
                   <p>
-                    Your eye reads{" "}
+                    You have spent{" "}
                     <span style={{ color: CREAM_TEXT.strong }}>
-                      {hueSummary.best.family}
+                      {formatTime(totalMs)}
                     </span>{" "}
-                    most clearly
-                    {hueSummary.worst && hueSummary.worst.family !== hueSummary.best.family ? (
-                      <>
-                        {" "}
-                        and finds{" "}
-                        <span style={{ color: CREAM_TEXT.strong }}>
-                          {hueSummary.worst.family}
-                        </span>{" "}
-                        hardest.
-                      </>
-                    ) : (
-                      "."
-                    )}
+                    looking carefully.
                   </p>
-                )}
-
-                {tier >= 2 && timeSummary && (
                   <p>
-                    {timeSummary.onlyOne ? (
-                      <>
-                        You play most often in{" "}
-                        <span style={{ color: CREAM_TEXT.strong }}>
-                          {timeSummary.period}
-                        </span>
-                        .
-                      </>
-                    ) : (
-                      <>
-                        Your eye is sharpest in{" "}
-                        <span style={{ color: CREAM_TEXT.strong }}>
-                          {timeSummary.sharpest.period}
-                        </span>
-                        .
-                      </>
-                    )}
+                    You have met{" "}
+                    <span style={{ color: CREAM_TEXT.strong }}>
+                      {uniqueColours}
+                    </span>{" "}
+                    named colour{uniqueColours === 1 ? "" : "s"}. There are
+                    sixty-three in the journey.
                   </p>
-                )}
+                </YourEyeSection>
 
-                {tier >= 3 && biasSummary && (
-                  <p>
-                    {biasSummary.kind === "even" ? (
-                      <>
-                        Your eye reads warm and cool colours with the same
-                        care.
-                      </>
-                    ) : (
-                      <>
+                {/* TIER 2 — patterns */}
+                {tier >= 2 && (hueSummary || timeSummary) && (
+                  <YourEyeSection label="Your patterns">
+                    {hueSummary && (
+                      <p>
                         Your eye reads{" "}
                         <span style={{ color: CREAM_TEXT.strong }}>
-                          {biasSummary.kind}
+                          {hueSummary.best.family}
                         </span>{" "}
-                        colours more sharply than{" "}
-                        {biasSummary.kind === "warm" ? "cool" : "warm"} ones.
-                      </>
+                        most clearly
+                        {hueSummary.worst &&
+                        hueSummary.worst.family !== hueSummary.best.family ? (
+                          <>
+                            {" "}
+                            and finds{" "}
+                            <span style={{ color: CREAM_TEXT.strong }}>
+                              {hueSummary.worst.family}
+                            </span>{" "}
+                            hardest.
+                          </>
+                        ) : (
+                          "."
+                        )}
+                      </p>
                     )}
-                  </p>
+                    {timeSummary && (
+                      <p>
+                        {timeSummary.onlyOne ? (
+                          <>
+                            You play most often in{" "}
+                            <span style={{ color: CREAM_TEXT.strong }}>
+                              {timeSummary.period}
+                            </span>
+                            .
+                          </>
+                        ) : (
+                          <>
+                            Your eye is sharpest in{" "}
+                            <span style={{ color: CREAM_TEXT.strong }}>
+                              {timeSummary.sharpest.period}
+                            </span>
+                            .
+                          </>
+                        )}
+                      </p>
+                    )}
+                  </YourEyeSection>
                 )}
 
-                {tier >= 3 && paceSummary && (
-                  <p>
-                    You take a{" "}
-                    <span style={{ color: CREAM_TEXT.strong }}>
-                      {paceSummary.kind}
-                    </span>{" "}
-                    pace — about {paceSummary.seconds} second
-                    {paceSummary.seconds === 1 ? "" : "s"} with the band
-                    before locking.
-                  </p>
-                )}
+                {/* TIER 3 — bias */}
+                {tier >= 3 &&
+                  (biasSummary || paceSummary || steadinessSummary) && (
+                    <YourEyeSection label="Your bias">
+                      {biasSummary && (
+                        <p>
+                          {biasSummary.kind === "even" ? (
+                            <>
+                              Your eye reads warm and cool colours with the
+                              same care.
+                            </>
+                          ) : (
+                            <>
+                              Your eye reads{" "}
+                              <span style={{ color: CREAM_TEXT.strong }}>
+                                {biasSummary.kind}
+                              </span>{" "}
+                              colours more sharply than{" "}
+                              {biasSummary.kind === "warm" ? "cool" : "warm"}{" "}
+                              ones.
+                            </>
+                          )}
+                        </p>
+                      )}
+                      {paceSummary && (
+                        <p>
+                          You take a{" "}
+                          <span style={{ color: CREAM_TEXT.strong }}>
+                            {paceSummary.kind}
+                          </span>{" "}
+                          pace — about {paceSummary.seconds} second
+                          {paceSummary.seconds === 1 ? "" : "s"} with the
+                          band before locking.
+                        </p>
+                      )}
+                      {steadinessSummary && (
+                        <p>
+                          Your accuracy is{" "}
+                          <span style={{ color: CREAM_TEXT.strong }}>
+                            {steadinessSummary.kind === "steady"
+                              ? "steady"
+                              : steadinessSummary.kind === "varying"
+                              ? "wide-ranging"
+                              : "gently variable"}
+                          </span>{" "}
+                          from lock to lock.
+                        </p>
+                      )}
+                    </YourEyeSection>
+                  )}
 
-                {tier >= 3 && steadinessSummary && (
-                  <p>
-                    Your accuracy is{" "}
-                    <span style={{ color: CREAM_TEXT.strong }}>
-                      {steadinessSummary.kind === "steady"
-                        ? "steady"
-                        : steadinessSummary.kind === "varying"
-                        ? "wide-ranging"
-                        : "gently variable"}
-                    </span>{" "}
-                    from lock to lock.
-                  </p>
-                )}
-
+                {/* TIER 4 — journey + colour */}
                 {tier >= 4 && tier4 && (
                   <>
-                    <p>
-                      You first found{" "}
-                      <span style={{ color: CREAM_TEXT.strong }}>
-                        {tier4.first.challenge}
-                      </span>
-                      . The most recent was{" "}
-                      <span style={{ color: CREAM_TEXT.strong }}>
-                        {tier4.latest.challenge}
-                      </span>
-                      .
-                    </p>
-                    <p>
-                      Your eye saw{" "}
-                      <span style={{ color: CREAM_TEXT.strong }}>
-                        {tier4.sharpest.challenge}
-                      </span>{" "}
-                      sharpest of all.
-                    </p>
-                    <p>
-                      You found{" "}
-                      <span style={{ color: CREAM_TEXT.strong }}>
-                        {tier4.hardest.name}
-                      </span>{" "}
-                      the hardest to read.
-                    </p>
-                    <p>
-                      And this is the average of every colour you have
-                      ever read &mdash; the quiet centre of your year of
-                      looking.
-                    </p>
-                    <div
-                      className="w-full h-24 mt-2"
-                      style={{
-                        background: oklchStr(tier4.yourColour),
-                      }}
-                      aria-label="Your colour"
-                    />
-                    <p
-                      className="font-display italic"
-                      style={{
-                        color: CREAM_TEXT.strong,
-                        fontSize: "clamp(1.4rem, 6vw, 2rem)",
-                        textAlign: "center",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Your colour.
-                    </p>
+                    <YourEyeSection label="Your journey">
+                      <p>
+                        You first found{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {tier4.first.challenge}
+                        </span>
+                        . The most recent was{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {tier4.latest.challenge}
+                        </span>
+                        .
+                      </p>
+                      <p>
+                        Your eye saw{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {tier4.sharpest.challenge}
+                        </span>{" "}
+                        sharpest of all, and found{" "}
+                        <span style={{ color: CREAM_TEXT.strong }}>
+                          {tier4.hardest.name}
+                        </span>{" "}
+                        the hardest to read.
+                      </p>
+                    </YourEyeSection>
+
+                    <YourEyeSection label="Your colour">
+                      <p>
+                        The average of every colour you have ever read —
+                        the quiet centre of your year of looking.
+                      </p>
+                      <div
+                        className="w-full h-28"
+                        style={{ background: oklchStr(tier4.yourColour) }}
+                        aria-label="Your colour"
+                      />
+                    </YourEyeSection>
                   </>
                 )}
 
-                {nextTier && (
-                  <p style={{ color: CREAM_TEXT.soft }}>
-                    <em>{nextTier.label}</em> opens after {nextTier.at} lock-ins.
-                    {" "}
-                    {nextTier.at - count} to go.
-                  </p>
-                )}
-                {!nextTier && (
-                  <p style={{ color: CREAM_TEXT.soft }}>
-                    <em>You have read every chapter.</em> Each reading
-                    deepens with everything you go on to find.
-                  </p>
-                )}
-              </>
+                {/* Footer — next tier or completed */}
+                <div
+                  className="pt-2"
+                  style={{ borderTop: `1px solid ${CREAM_TEXT.border}` }}
+                >
+                  {nextTier && (
+                    <p
+                      className="pt-4"
+                      style={{ color: CREAM_TEXT.soft, fontSize: "0.92em" }}
+                    >
+                      <em>{nextTier.label}</em> opens after{" "}
+                      {nextTier.at} lock-ins. {nextTier.at - count} to go.
+                    </p>
+                  )}
+                  {!nextTier && (
+                    <p
+                      className="pt-4"
+                      style={{ color: CREAM_TEXT.soft, fontSize: "0.92em" }}
+                    >
+                      <em>You have read every chapter.</em> Each reading
+                      deepens with everything you go on to find.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
