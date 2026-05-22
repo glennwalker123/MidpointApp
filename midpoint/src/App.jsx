@@ -1160,6 +1160,25 @@ export default function App() {
         .push-yours { animation: pushYours 1.17s cubic-bezier(0.65, 0, 0.35, 1) both; }
         .push-truth { animation: pushTruth 1.17s cubic-bezier(0.65, 0, 0.35, 1) both; }
 
+        /* Free-play round transition: truth expands from half-width to full,
+           yours band collapses to zero, score labels fade away. Starts from
+           the settled push-yours/push-truth state. */
+        @keyframes pushYoursOut {
+          from { width: 50%; }
+          to   { width: 0%; }
+        }
+        @keyframes pushTruthFull {
+          from { width: 50%; }
+          to   { width: 100%; }
+        }
+        @keyframes labelsFadeOut {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(4px); }
+        }
+        .push-yours-out { animation: pushYoursOut 1.0s cubic-bezier(0.65, 0, 0.35, 1) both; }
+        .push-truth-full { animation: pushTruthFull 1.0s cubic-bezier(0.65, 0, 0.35, 1) both; }
+        .labels-fade-out { animation: labelsFadeOut 0.6s ease-out both; }
+
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -1701,8 +1720,6 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, onEnterFre
     onEnterFreePlay();
   }
 
-  // Free play unlocks once Origin (chapter id 1) is complete.
-  const freePlayUnlocked = completed.has(1);
 
   // Clear the unlocking flag after the sweep finishes (delay 0.6s + 1.8s anim + small buffer)
   // and play a soft swelling tone alongside the sweep — same family as the
@@ -1740,6 +1757,30 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, onEnterFre
             Your eye
           </button>
         </div>
+
+        <button
+          onClick={enterFreePlay}
+          className="relative w-full mb-3 h-14 flex items-center justify-between px-5 fade-up transition-transform active:scale-[0.99]"
+          style={{
+            background: "transparent",
+            border: `1px solid ${CREAM_TEXT.border}`,
+            animationDelay: "0.18s",
+            animationDuration: "1.8s",
+          }}
+        >
+          <span
+            className="font-display italic"
+            style={{ color: CREAM_TEXT.strong, fontSize: "20px", lineHeight: 1 }}
+          >
+            Free play
+          </span>
+          <span
+            className="text-[10px] tracking-[0.32em] uppercase"
+            style={{ color: CREAM_TEXT.soft }}
+          >
+            eight random
+          </span>
+        </button>
 
         <div className="flex flex-col gap-3 flex-1 content-start">
           {LEVELS.map((level, i) => {
@@ -1852,31 +1893,6 @@ function Home({ onSelect, onOpenAbout, onOpenSettings, onOpenYourEye, onEnterFre
           })}
         </div>
 
-        {freePlayUnlocked && (
-          <button
-            onClick={enterFreePlay}
-            className="relative w-full mt-3 h-14 flex items-center justify-between px-5 fade-up transition-transform active:scale-[0.99]"
-            style={{
-              background: "transparent",
-              border: `1px solid ${CREAM_TEXT.border}`,
-              animationDelay: `${0.3 + LEVELS.length * 0.22 + 0.2}s`,
-              animationDuration: "1.8s",
-            }}
-          >
-            <span
-              className="font-display italic"
-              style={{ color: CREAM_TEXT.strong, fontSize: "20px", lineHeight: 1 }}
-            >
-              Free play
-            </span>
-            <span
-              className="text-[10px] tracking-[0.32em] uppercase"
-              style={{ color: CREAM_TEXT.soft }}
-            >
-              eight random
-            </span>
-          </button>
-        )}
 
         <div
           className="pt-10 flex justify-between items-end fade-up"
@@ -2739,6 +2755,9 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   const [hasReleased, setHasReleased] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [expansion, setExpansion] = useState(null);
+  // Free-play only: while true, the reveal split animates further —
+  // truth fills the band, yours collapses, labels fade.
+  const [transitioning, setTransitioning] = useState(false);
   // Per-challenge interaction tracking, used only for tutorial chapters
   // (level.tutorialHint = true). For non-tutorial chapters the hint follows
   // the global hasEverInteracted, which only ever flips once.
@@ -2849,12 +2868,18 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
   }
 
   function continueFromReveal() {
-    // Free-play skips the reflection card — straight from reveal into the
-    // next challenge, or into the FreePlayComplete rest screen.
+    // Free-play skips the reflection card. Instead of snapping to the next
+    // challenge, run a 1s expand-and-fade transition: yours collapses, truth
+    // fills the band, the scores fade. Then advance — top/bottom bands
+    // already have a 1.44s background transition so the colour change to
+    // the new challenge is smooth.
     if (level.freeplay) {
       audio.stopPad();
+      audio.stopChord();
+      setTransitioning(true);
       setTimeout(() => {
         setExpansion(null);
+        setTransitioning(false);
         if (challengeIdx < total - 1) {
           setChallengeIdx(challengeIdx + 1);
           setPosition(randomStart());
@@ -2863,7 +2888,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
         } else {
           setPhase("complete");
         }
-      }, 900);
+      }, 1000);
       return;
     }
 
@@ -2944,12 +2969,15 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
     }
   }, [isDragging, candidateCol, phase, audio]);
 
-  // Auto-transition from reveal to reflection — no button required
+  // Auto-transition from reveal — chapters give the player ~3.6s to read
+  // Yours vs True, then go to the reflection card. Free-play keeps it
+  // brief (~1.5s) and runs the expand-and-fade transition instead.
   useEffect(() => {
     if (phase !== "reveal") return;
+    const delay = level.freeplay ? 1500 : 3600;
     const t = setTimeout(() => {
       continueFromReveal();
-    }, 3600);
+    }, delay);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -2980,6 +3008,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
           hasInteracted={level.tutorialHint ? chHasInteracted : hasEverInteracted}
           hasReleased={hasReleased}
           isDragging={isDragging}
+          transitioning={transitioning}
           rightHalfRef={rightHalfRef}
           bgColor={bgColor}
           audio={audio}
@@ -3167,6 +3196,7 @@ function IntroScreen({ level, audio, onBegin, onExit }) {
 function ChallengeView({
   level, challenge, challengeIdx, total, phase, position,
   candidateCol, truthCol, score, distance, hasInteracted, hasReleased, isDragging,
+  transitioning,
   rightHalfRef, bgColor, audio,
   onPointerDown, onPointerMove, onPointerUp, onLock, onContinue,
 }) {
@@ -3237,7 +3267,9 @@ function ChallengeView({
               <div className="relative w-full h-full">
                 <div className="flex w-full h-full">
                   <div
-                    className="push-yours h-full flex-shrink-0 relative"
+                    className={`h-full flex-shrink-0 relative ${
+                      transitioning ? "push-yours-out" : "push-yours"
+                    }`}
                     style={{ background: oklchStr(candidateCol) }}
                   >
                     {/* hairline at the moving boundary */}
@@ -3245,13 +3277,17 @@ function ChallengeView({
                   </div>
                   <div
                     ref={rightHalfRef}
-                    className="push-truth h-full flex-shrink-0"
+                    className={`h-full flex-shrink-0 ${
+                      transitioning ? "push-truth-full" : "push-truth"
+                    }`}
                     style={{ background: oklchStr(truthCol) }}
                   />
                 </div>
                 <div
-                  className="absolute inset-x-0 bottom-3 flex justify-around fade-up pointer-events-none"
-                  style={{ animationDelay: "1.26s" }}
+                  className={`absolute inset-x-0 bottom-3 flex justify-around pointer-events-none ${
+                    transitioning ? "labels-fade-out" : "fade-up"
+                  }`}
+                  style={{ animationDelay: transitioning ? undefined : "1.26s" }}
                 >
                   <div className="text-[10px] tracking-[0.35em] uppercase" style={{ color: labelOn(candidateCol) }}>
                     Yours
