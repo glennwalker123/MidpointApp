@@ -86,6 +86,77 @@ class AudioEngine {
     osc.stop(t + duration);
   }
 
+  // Slow, sustained chord that swells under the active challenge. The
+  // progression walks through five chords across a chapter, looping for
+  // free-play. Plagal-leaning, doesn't fully resolve — meditative.
+  //   index 0 → F  (IV)    soft entrance
+  //   index 1 → C  (I)     home
+  //   index 2 → Am (vi)    turn
+  //   index 3 → Em (iii)   deeper
+  //   index 4 → G  (V)     open ending
+  playChord(index) {
+    if (!this.ensureContext()) return;
+    if (this.muted) return;
+    this.stopChord();
+    const t = this.ctx.currentTime;
+
+    const CHORDS = [
+      [174.61, 220.00, 261.63], // F  (IV)
+      [130.81, 164.81, 196.00], // C  (I)
+      [220.00, 261.63, 329.63], // Am (vi)
+      [164.81, 196.00, 246.94], // Em (iii)
+      [196.00, 246.94, 293.66], // G  (V)
+    ];
+    const chord = CHORDS[index % CHORDS.length];
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 900;
+    filter.Q.value = 0.5;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.075, t + 4.0); // slow swell underneath touch tone
+
+    const oscs = [];
+    for (const freq of chord) {
+      const osc = this.ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      osc.connect(filter);
+      osc.start(t);
+      oscs.push(osc);
+    }
+    // soft fifth above the root for openness
+    const top = this.ctx.createOscillator();
+    top.type = "sine";
+    top.frequency.value = chord[0] * 1.5;
+    const topGain = this.ctx.createGain();
+    topGain.gain.value = 0.25;
+    top.connect(topGain);
+    topGain.connect(filter);
+    top.start(t);
+    oscs.push(top);
+
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    this.chordNodes = { oscs, gain, filter };
+  }
+
+  stopChord() {
+    if (!this.chordNodes || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const { oscs, gain } = this.chordNodes;
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(gain.gain.value, t);
+    gain.gain.linearRampToValueAtTime(0, t + 1.8);
+    for (const osc of oscs) {
+      try { osc.stop(t + 2.0); } catch {}
+    }
+    this.chordNodes = null;
+  }
+
   startPad(color) {
     if (!this.ensureContext()) return;
     if (this.muted) return;
@@ -1036,6 +1107,7 @@ export default function App() {
 
   function replayFreePlay() {
     audioRef.current.stopPad();
+    audioRef.current.stopChord();
     setFreePlayLevel(generateFreePlayLevel());
     setFreePlayGen((g) => g + 1);
   }
@@ -1044,6 +1116,7 @@ export default function App() {
   // chapter's IntroScreen — used by Origin's bridge screen. No return to home.
   function bridgeToNext(currentId) {
     audioRef.current.stopPad();
+    audioRef.current.stopChord();
     setCompleted((prev) => {
       const next = new Set(prev);
       next.add(currentId);
@@ -1054,6 +1127,7 @@ export default function App() {
 
   function exitLevel(wasCompleted, id) {
     audioRef.current.stopPad();
+    audioRef.current.stopChord();
     if (wasCompleted) {
       setCompleted((prev) => {
         const next = new Set(prev);
@@ -2837,13 +2911,25 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
     onExit(false);
   }
 
-  // safety: stop pad and touch tone on unmount
+  // safety: stop pad, chord, and touch tone on unmount
   useEffect(() => {
     return () => {
       audio.stopPad();
       audio.touchStop();
+      audio.stopChord();
     };
   }, [audio]);
+
+  // Chord progression: a sustained, slow-swelling chord per challenge.
+  // Plays beneath the active gameplay, swaps to the next chord when
+  // challengeIdx advances, fades out at the end of the round.
+  useEffect(() => {
+    if (phase === "play") {
+      audio.playChord(challengeIdx);
+    } else if (phase === "complete") {
+      audio.stopChord();
+    }
+  }, [phase, challengeIdx, audio]);
 
   // Touch tone — plays while finger is on the candidate band, glides with the color
   useEffect(() => {
