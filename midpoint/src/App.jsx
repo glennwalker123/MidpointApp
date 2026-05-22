@@ -9,6 +9,15 @@ class AudioEngine {
     this.ctx = null;
     this.masterGain = null;
     this.padNodes = null;
+    this.chordNodes = null;
+    this.beatActive = false;
+    this.beatTimeout = null;
+    this.beatBpm = 55;
+    this.beatGain = 0.20;
+    this.beatSlowing = false;
+    this.beatSlowStart = 0;
+    this.beatSlowDuration = 15;
+    this.beatStartBpm = 55;
     this.muted = false;
   }
 
@@ -116,7 +125,7 @@ class AudioEngine {
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(0.075, t + 4.0); // slow swell underneath touch tone
+    gain.gain.linearRampToValueAtTime(0.14, t + 4.0); // slow swell — louder than the bed but still under the touch tone
 
     const oscs = [];
     for (const freq of chord) {
@@ -155,6 +164,74 @@ class AudioEngine {
       try { osc.stop(t + 2.0); } catch {}
     }
     this.chordNodes = null;
+  }
+
+  // Soft sub-bass pulse — used in free-play. Starts at the 4th step of a
+  // round (challengeIdx === 3), runs at ~55 BPM, then slows + fades across
+  // the 8th step (challengeIdx === 7) until silent.
+  startBeat(bpm = 55) {
+    if (!this.ensureContext()) return;
+    if (this.muted) return;
+    this.stopBeat();
+    this.beatActive = true;
+    this.beatBpm = bpm;
+    this.beatStartBpm = bpm;
+    this.beatGain = 0.22;
+    this.beatSlowing = false;
+    this.scheduleBeat();
+  }
+
+  scheduleBeat() {
+    if (!this.beatActive || !this.ctx) return;
+    let bpm = this.beatBpm;
+    let gain = this.beatGain;
+    if (this.beatSlowing) {
+      const elapsed = this.ctx.currentTime - this.beatSlowStart;
+      const progress = Math.min(1, elapsed / this.beatSlowDuration);
+      bpm = this.beatStartBpm * (1 - progress * 0.55);  // slow to ~45% of start
+      gain = this.beatGain * (1 - progress);             // fade to silent
+      if (progress >= 1) {
+        this.beatActive = false;
+        this.beatTimeout = null;
+        return;
+      }
+    }
+    this.playBeatTone(gain);
+    const interval = 60000 / Math.max(15, bpm);
+    this.beatTimeout = setTimeout(() => this.scheduleBeat(), interval);
+  }
+
+  playBeatTone(gainVal) {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(85, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.12); // pitch drop = kick
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(gainVal, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.35);
+  }
+
+  slowBeat(durationS = 18) {
+    if (!this.beatActive || !this.ctx) return;
+    this.beatSlowing = true;
+    this.beatSlowStart = this.ctx.currentTime;
+    this.beatSlowDuration = durationS;
+    this.beatStartBpm = this.beatBpm;
+  }
+
+  stopBeat() {
+    this.beatActive = false;
+    if (this.beatTimeout) {
+      clearTimeout(this.beatTimeout);
+      this.beatTimeout = null;
+    }
   }
 
   startPad(color) {
@@ -1108,6 +1185,7 @@ export default function App() {
   function replayFreePlay() {
     audioRef.current.stopPad();
     audioRef.current.stopChord();
+    audioRef.current.stopBeat();
     setFreePlayLevel(generateFreePlayLevel());
     setFreePlayGen((g) => g + 1);
   }
@@ -1117,6 +1195,7 @@ export default function App() {
   function bridgeToNext(currentId) {
     audioRef.current.stopPad();
     audioRef.current.stopChord();
+    audioRef.current.stopBeat();
     setCompleted((prev) => {
       const next = new Set(prev);
       next.add(currentId);
@@ -1128,6 +1207,7 @@ export default function App() {
   function exitLevel(wasCompleted, id) {
     audioRef.current.stopPad();
     audioRef.current.stopChord();
+    audioRef.current.stopBeat();
     if (wasCompleted) {
       setCompleted((prev) => {
         const next = new Set(prev);
@@ -2942,6 +3022,7 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
       audio.stopPad();
       audio.touchStop();
       audio.stopChord();
+      audio.stopBeat();
     };
   }, [audio]);
 
@@ -2955,6 +3036,19 @@ function Level({ level, audio, hasEverInteracted, onFirstInteract, onExit, onBri
       audio.stopChord();
     }
   }, [phase, challengeIdx, audio]);
+
+  // Free-play beat layer: kicks in at the 4th challenge (index 3), stays
+  // steady through 5-7, and slows + fades across the 8th (index 7) until
+  // silent. Chapters never start the beat.
+  useEffect(() => {
+    if (!level.freeplay) return;
+    if (phase === "play") {
+      if (challengeIdx === 3) audio.startBeat(55);
+      else if (challengeIdx === 7) audio.slowBeat(18);
+    } else if (phase === "complete") {
+      audio.stopBeat();
+    }
+  }, [phase, challengeIdx, level.freeplay, audio]);
 
   // Touch tone — plays while finger is on the candidate band, glides with the color
   useEffect(() => {
