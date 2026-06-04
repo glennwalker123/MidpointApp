@@ -77,6 +77,33 @@ If asked to change volumes, the current balance (set carefully): ambient noise i
 - **"Make the sound …"** — touch `AudioEngine` methods. Test on headphones for the binaural layer.
 - **"Tune the colour palette"** — adjust the OKLCH triples in the `LEVELS` array. Keep `l` between 0.20 and 0.95 for legibility, `c` reasonable for the hue (greens cap around 0.20, blues can go higher).
 
+## tincture — the colour-mixing game (separate)
+
+A second, standalone game lives alongside the midpoint app and must stay
+independent of it. **Do not entangle the two.**
+
+- **Own URL** — `mix.html` is a second Vite entry point (see `vite.config.js`
+  `rollupOptions.input`). Served at `/MidpointApp/mix.html`; `index.html` stays
+  the midpoint game.
+- **Own files** — everything is under `src/mix/`: `MixApp.jsx` (UI),
+  `mixing.js` (subtractive paint model + CIELAB matching), `levels.js`,
+  `audio.js`. Nothing here imports from `App.jsx`, and `App.jsx` imports nothing
+  from here.
+- **The game** — skeuomorphic glass test tubes of paint. You're given a target
+  tube and mix from a shelf of pigment tubes (tap to add a drop) until your glass
+  matches. Win condition is *exact recipe*: the target is generated from a hidden
+  pigment ratio, and you match by landing within ΔE 3.5 of it (equivalent ratios
+  like 2:1 and 4:2 both count). 12 levels, two pigments up to four, gated
+  sequentially. Progress in `localStorage["tincture:solved"]`.
+- **Mixing model** — real subtractive pigment behaviour (blue + yellow → green,
+  ratio shifts the hue) via a coarse 6-band reflectance spectrum mixed as a
+  weighted geometric mean, then mapped to RGB. Not OKLCH averaging — this game
+  wants paint, not perceptual blends. If you retune pigments, re-run the kind of
+  sanity check used to author them (mix the primaries/secondaries and eyeball the
+  RGB) before committing.
+- **Name** — "tincture." is a working title; easy to change (title in `mix.html`,
+  heading in `Home`).
+
 ## Deployment
 
 Two targets share one codebase:
