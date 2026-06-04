@@ -7,19 +7,23 @@ import { mixToRgb } from "./mixing.js";
 //
 // No level names its answer on screen; the only public hint is how many
 // distinct pigments the target is built from.
+// Spread across the hue wheel — green, orange, violet, teal, pink, forest,
+// slate, aubergine, gold, mauve, olive, indigo — with only two warm targets.
+// Later levels add a decoy pigment to the shelf (in `palette` but not in
+// `recipe`), so more tubes does not mean more pigments are needed.
 const RAW = [
-  { name: "Ember", palette: ["red", "yellow"], recipe: { red: 1, yellow: 1 } },
   { name: "Meadow", palette: ["yellow", "blue"], recipe: { yellow: 1, blue: 1 } },
-  { name: "Heather", palette: ["red", "blue"], recipe: { red: 1, blue: 1 } },
-  { name: "Rust", palette: ["red", "yellow"], recipe: { red: 2, yellow: 1 } },
-  { name: "Moss", palette: ["red", "yellow", "blue"], recipe: { yellow: 2, blue: 1 } },
-  { name: "Blush", palette: ["red", "yellow", "white"], recipe: { red: 1, yellow: 1, white: 1 } },
-  { name: "Lagoon", palette: ["yellow", "blue", "white"], recipe: { yellow: 1, blue: 2 } },
-  { name: "Loam", palette: ["red", "yellow", "blue"], recipe: { red: 1, yellow: 1, blue: 1 } },
-  { name: "Rose Dust", palette: ["red", "yellow", "blue", "white"], recipe: { red: 2, yellow: 1, white: 2 } },
-  { name: "Sage", palette: ["red", "yellow", "blue", "white"], recipe: { yellow: 2, blue: 1, white: 1 } },
-  { name: "Taupe", palette: ["red", "yellow", "blue", "white"], recipe: { red: 1, yellow: 1, blue: 1, white: 1 } },
-  { name: "Greige", palette: ["red", "yellow", "blue", "white"], recipe: { red: 1, yellow: 2, blue: 1, white: 2 } },
+  { name: "Ember", palette: ["red", "yellow"], recipe: { red: 1, yellow: 1 } },
+  { name: "Iris", palette: ["crimson", "blue"], recipe: { crimson: 1, blue: 1 } },
+  { name: "Lagoon", palette: ["yellow", "blue"], recipe: { yellow: 1, blue: 2 } },
+  { name: "Blush", palette: ["crimson", "blue", "white"], recipe: { crimson: 1, white: 3 } },
+  { name: "Pine", palette: ["yellow", "blue", "black"], recipe: { yellow: 2, blue: 2, black: 1 } },
+  { name: "Slate", palette: ["blue", "white", "black"], recipe: { blue: 2, white: 2, black: 1 } },
+  { name: "Plum", palette: ["crimson", "blue", "black"], recipe: { crimson: 3, blue: 1, black: 1 } },
+  { name: "Ochre", palette: ["red", "yellow", "blue", "black"], recipe: { red: 1, yellow: 3, black: 1 } },
+  { name: "Heath", palette: ["crimson", "blue", "white", "black"], recipe: { crimson: 3, blue: 1, white: 3, black: 1 } },
+  { name: "Sage", palette: ["yellow", "blue", "white", "black"], recipe: { yellow: 3, blue: 1, white: 2, black: 1 } },
+  { name: "Dusk", palette: ["crimson", "blue", "white", "black"], recipe: { crimson: 1, blue: 2, black: 2, white: 1 } },
 ];
 
 const COUNT_WORD = ["", "One", "Two", "Three", "Four"];
