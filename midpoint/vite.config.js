@@ -6,4 +6,15 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => ({
   base: mode === "native" ? "/" : "/MidpointApp/",
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      // Two independent pages, two URLs:
+      //   index.html → the midpoint game (untouched)
+      //   mix.html   → tincture, the colour-mixing game
+      input: {
+        main: "index.html",
+        mix: "mix.html",
+      },
+    },
+  },
 }));
